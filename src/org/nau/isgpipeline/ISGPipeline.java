@@ -28,11 +28,14 @@ import net.sf.samtools.SAMSequenceDictionary;
 import org.broadinstitute.sting.utils.codecs.vcf.VCFHeader;
 import org.nau.coverage.bam.FindCoverageRunner;
 import org.nau.finddups.FindDupsRunner;
+import org.nau.isg.tools.FindParalogsRunner;
 import org.nau.isg2.ISG2;
+import org.nau.mummer.DeltaFilterRunner;
+import org.nau.mummer.MumSnpToVcfRunner;
 import org.nau.mummer.MummerEnv;
-import org.nau.mummer.MummerRunnerFactory;
 import org.nau.mummer.NucmerRunner;
-import org.nau.mummer.SharedMummerRunner;
+import org.nau.mummer.ShowSnpsRunner;
+import org.nau.util.FileUtils;
 import org.tgen.commons.gatk.UnifiedGenotyperRunner;
 import org.tgen.commons.gatk.UnifiedGenotyperRunner.OutMode;
 import org.tgen.commons.reference.CreateFastaIndex;
@@ -121,19 +124,81 @@ public class ISGPipeline extends CommandLineProgram {
         es.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
     }
 
-    private void runMummer(ISGEnv isg, MummerEnv mummerEnv) throws InterruptedException {
+    private void runMummer(final ISGEnv isg, final MummerEnv mummerEnv) throws InterruptedException {
         System.out.println("running mummer...");
         ExecutorService es = Executors.newFixedThreadPool(NUM_THREADS);
         //run mummer on fastas
+        final String refSampleName = FileUtils.stripExtension(isg.getRef());
         Collection<File> fastaFiles = isg.getFastas();
-        for (File fastaFile : fastaFiles) {
-            String sampleName = MummerRunnerFactory.getFilePrefix(fastaFile);
-            Runnable runner = new SharedMummerRunner(isg.getRef(),
-                    fastaFile,
-                    new File(isg.getVcfDir(), sampleName + ".vcf"),
-                    new File(isg.getCovDir(), sampleName + ".interval_list"),
-                    mummerEnv);
-            es.submit(runner);
+        for (final File qryFasta : fastaFiles) {
+            es.submit(new Runnable() {
+
+                @Override
+                public void run() {
+                    final String qrySampleName = FileUtils.stripExtension(qryFasta);
+                    final String prefix = refSampleName + "_" + qrySampleName;
+
+                    File ref = isg.getRef();
+                    File delta = new File(mummerEnv.getMumOutDir(), prefix + ".delta");
+                    File coords = new File(mummerEnv.getMumOutDir(), prefix + ".coords");
+                    File filter = new File(mummerEnv.getMumOutDir(), prefix + ".filter");
+                    File snps = new File(mummerEnv.getMumOutDir(), prefix + ".snps");
+                    File vcf = new File(isg.getVcfDir(), qrySampleName + ".vcf");
+                    File cov = new File(isg.getCovDir(), qrySampleName + ".interval_list");
+
+                    new NucmerRunner(prefix, ref, qryFasta, mummerEnv).run();
+                    new DeltaFilterRunner(delta, filter, mummerEnv).run();
+                    new ShowSnpsRunner(filter, snps, mummerEnv).run();
+                    new MumSnpToVcfRunner(snps, vcf, ref, qrySampleName).run();
+                    new FindDupsRunner(coords, cov, ref).run();
+                }
+            });
+        }
+        es.shutdown();
+        es.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+    }
+
+    private void runRepeats(final ISGEnv isg, final MummerEnv mummerEnv) throws InterruptedException {
+        System.out.println("finding repeats...");
+        ExecutorService es = Executors.newFixedThreadPool(NUM_THREADS);
+        //run mummer on fastas
+        final File ref = isg.getRef();
+        final String refSampleName = FileUtils.stripExtension(ref);
+
+        //find repeats in reference
+        es.submit(new Runnable() {
+            @Override
+            public void run() {
+                final String prefix = refSampleName + "_" + refSampleName;
+
+                File coords = new File(mummerEnv.getMumOutDir(), prefix + ".coords");
+                File dups = new File(isg.getDupsDir(), refSampleName + ".interval_list");
+
+                new NucmerRunner(prefix, ref, mummerEnv).run();
+                new FindDupsRunner(coords, dups, ref).run();
+            }
+        });
+
+        //find repeats in query genomes
+        List<File> fastaFiles = new ArrayList<File>(isg.getFastas());
+        for (final File fastaFile : fastaFiles) {
+            es.submit(new Runnable() {
+
+                @Override
+                public void run() {
+                    String sampleName = FileUtils.stripExtension(fastaFile);
+                    String selfPrefix = sampleName + "_" + sampleName;
+                    String refPrefix = sampleName + "_" + refSampleName;
+
+                    File selfCoords = new File(mummerEnv.getMumOutDir(), selfPrefix + ".coords");
+                    File refCoords = new File(mummerEnv.getMumOutDir(), refPrefix + ".coords");
+                    File paralogs = new File(isg.getDupsDir(), sampleName + ".interval_list");
+
+                    new NucmerRunner(selfPrefix, fastaFile, mummerEnv).run();
+                    new NucmerRunner(refPrefix, fastaFile, ref, mummerEnv).run();
+                    new FindParalogsRunner(selfCoords, refCoords, paralogs, ref).run();
+                }
+            });
         }
         es.shutdown();
         es.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -154,17 +219,17 @@ public class ISGPipeline extends CommandLineProgram {
 
     private void runISG(ISGEnv isg) {
         List<String> command = new ArrayList<String>();
-        for(String sample: getSamples(isg)){
-            command.add("SAMPLE="+sample);
+        for (String sample : getSamples(isg)) {
+            command.add("SAMPLE=" + sample);
         }
-        command.add("COV_DIR="+isg.getCovDir().getAbsolutePath());
-        command.add("REF="+isg.getRef());
-        command.add("GBK_DIR="+isg.getGenBankDir());
-        command.add("VCF_DIR="+isg.getVcfDir().getAbsolutePath());
-        command.add("OUTPUT="+isg.getIsgOutFile().getAbsolutePath());
+        command.add("COV_DIR=" + isg.getCovDir().getAbsolutePath());
+        command.add("REF=" + isg.getRef());
+        command.add("GBK_DIR=" + isg.getGenBankDir());
+        command.add("VCF_DIR=" + isg.getVcfDir().getAbsolutePath());
+        command.add("OUTPUT=" + isg.getIsgOutFile().getAbsolutePath());
         command.add("MIN_QUAL=0");
-        command.add("MIN_GQ="+MIN_QUAL);
-        command.add("MIN_DP="+MIN_SNP_COVERAGE);
+        command.add("MIN_GQ=" + MIN_QUAL);
+        command.add("MIN_DP=" + MIN_SNP_COVERAGE);
         ISG2 isg2 = new ISG2();
         isg2.instanceMain(command.toArray(new String[0]));
     }
@@ -196,7 +261,7 @@ public class ISGPipeline extends CommandLineProgram {
             ret.add(getSampleName(bamFile));
         }
         for (File fastaFile : isg.getFastas()) {
-            String sampleName = MummerRunnerFactory.getFilePrefix(fastaFile);
+            String sampleName = FileUtils.stripExtension(fastaFile);
             ret.add(sampleName);
         }
         return ret;
@@ -241,13 +306,7 @@ public class ISGPipeline extends CommandLineProgram {
             runMummer(isg, mummerEnv);
 
             //create dups
-            System.out.println("creating dups...");
-            String prefix = mummerEnv.getMumOutDir().getAbsolutePath() + "/ref";
-            NucmerRunner nucmer = new NucmerRunner(prefix, isg.getRef(), isg.getRef(), false, mummerEnv);
-            nucmer.run();
-            File dups = new File(isg.getDupsDir().getAbsolutePath() + "/ref.interval_list");
-            FindDupsRunner dupsRunner = new FindDupsRunner(isg.getCoordsDups(), dups, isg.getRef());
-            dupsRunner.run();
+            runRepeats(isg, mummerEnv);
 
             //find coverage
             System.out.println("finding coverage...");

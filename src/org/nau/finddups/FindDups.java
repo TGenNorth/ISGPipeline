@@ -36,11 +36,11 @@ public class FindDups extends CommandLineProgram {
     @Usage(programVersion = "0.1")
     public String USAGE = "Find duplicated regions";
     @Option(doc = "Reference coords", optional = false)
-    public File COORDS;// = new File("Bp4160ref.coords");
+    public File COORDS;// = new File("dist/mummer/ref_MSHR1043.coords");
     @Option(doc = "Reference sequence file.")
-    public File REFERENCE_SEQUENCE;// = new File("MSHR1655_chromosomes.fasta");
+    public File REFERENCE_SEQUENCE;// = new File("dist/ref.fasta");
     @Option(doc = "Output interval file.")
-    public File OUTPUT;// = new File("out.interval_list");
+    public File OUTPUT;// = new File("dist/coverage/MSHR1043.coords");
 
     /**
      * @param args the command line arguments
@@ -70,39 +70,17 @@ public class FindDups extends CommandLineProgram {
         final IntervalList intervalList = new IntervalList(header);
 
         List<CoordsRecord> coords = CoordsUtils.readCoords(COORDS, false);
-
-        //create overlap detector 
-        OverlapDetector<Coord> overlapDetector = new OverlapDetector<Coord>(0, 0);
+        
         for (CoordsRecord coord : coords) {
-            Coord c = coord.getCoord(1);
-            c = c.fixLength();
-            Interval i = new Interval(c.getChr(), c.getStart(), c.getEnd());
-            overlapDetector.addLhs(c, i);
-        }
-
-        for (CoordsRecord coord : coords) {
-            Coord c1 = coord.getCoord(1);
-            c1 = c1.fixLength();
-            Interval i = new Interval(c1.getChr(), c1.getStart(), c1.getEnd());
-            Collection<Coord> overlapingCoords = overlapDetector.getOverlaps(i);
-            for (Coord c2 : overlapingCoords) {
-                if (c2.equals(c1)) {
-                    continue;
-                }
-                
-//                System.out.println(c1.getStart()+" "+c1.getEnd());
-//                System.out.println(c2.getStart()+" "+c2.getEnd());
-                
-                Coord ic = c1.intersects(c2);
-                Coord oc = ic.getCoordsRecord().getOther(ic);
-                //add interval to list
-//                System.out.println(oc.getStart()+" "+oc.getEnd());
-//                System.out.println();
-                Interval iToAdd = new Interval(oc.getChr(), oc.getStart(), oc.getEnd(), false, c1.getStart()+"_"+c1.getEnd()+":"+c2.getStart()+"_"+c2.getEnd());
-                intervalList.add(iToAdd);
+            Coord c1 = coord.getCoord(0);
+            Coord c2 = coord.getCoord(1);
+            if (c1.getStart() == c2.getStart() && c1.getEnd() == c2.getEnd() && c1.getChr().equals(c2.getChr())) {
+                continue;
+            } else {
+                Interval intvl1 = new Interval(c1.getChr(), c1.getStart(), c1.getEnd(), false, ".");
+                intervalList.add(intvl1);
             }
         }
-
 
         intervalList.unique();
         intervalList.write(OUTPUT);

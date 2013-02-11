@@ -6,22 +6,32 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import org.nau.util.ExternalProcess;
 import org.tgen.commons.utils.CommandFactory;
-import org.tgen.commons.utils.ExternalProcess;
 
 public class ShowSnpsRunner implements Runnable {
 
     private final File deltaFile;
     private final File snpsFile;
-    private final boolean contigs;
     private final MummerEnv env;
 
-    public ShowSnpsRunner(File deltaFile, File snpsFile, boolean contigs, MummerEnv env) {
-        this.contigs = contigs;
+    public ShowSnpsRunner(File deltaFile, File snpsFile, MummerEnv env) {
         this.deltaFile = deltaFile;
         this.snpsFile = snpsFile;
         this.env = env;
+    }
+    
+    private String[] createShowSnpsCommand() {
+        List<String> ret = new ArrayList<String>();
+        ret.add(env.getShowSnps().getAbsolutePath());
+        ret.add("-lrTHI");
+        ret.add("-x");
+        ret.add("10");
+        ret.add(deltaFile.getAbsolutePath());
+        return ret.toArray(new String[ret.size()]);
     }
 
     public void run() {
@@ -29,15 +39,7 @@ public class ShowSnpsRunner implements Runnable {
             System.out.println(snpsFile.getPath()+" already exists.");
             return;
         }
-        String[] cmd = CommandFactory.generateShowSnpsCommand(env.getShowSnps(), deltaFile, contigs);
-        ExternalProcess ep;
-        try {
-            ep = new ExternalProcess(cmd, new FileOutputStream(snpsFile));
-            ep.run();
-        } catch (FileNotFoundException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
+        String[] cmd = createShowSnpsCommand();
+        ExternalProcess.execute(cmd, null, snpsFile);
     }
 }
