@@ -26,6 +26,10 @@ import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMReadGroupRecord;
 import net.sf.samtools.SAMSequenceDictionary;
 import org.broadinstitute.sting.utils.codecs.vcf.VCFHeader;
+import org.nau.bwa.BWAPipeline;
+import org.nau.bwa.IndexRunner;
+import org.nau.bwamatch.SequenceFilePair;
+import org.nau.bwamatch.SequenceFilePairMatcher;
 import org.nau.coverage.bam.FindCoverageRunner;
 import org.nau.finddups.FindDupsRunner;
 import org.nau.isg.tools.FindParalogsRunner;
@@ -60,6 +64,8 @@ public class ISGPipeline extends CommandLineProgram {
     public File MUMMER;
     @Option(doc = "Path to GATK 2.1 or later.", optional = true)
     public File GATK;
+    @Option(doc = "Path to BWA.", optional = true)
+    public File BWA;
     @Option(doc = "Path to SolSNP options file. To get a list of all available options "
     + "refer to http://sourceforge.net/projects/solsnp/files/SolSNP-1.1/", optional = true)
     public File SOLSNP_OPTIONS_FILE;
@@ -119,6 +125,26 @@ public class ISGPipeline extends CommandLineProgram {
                 runner = new org.nau.solsnp.SolSNPRunner(bamFile, out, isg.getRef(), SOLSNP_OPTIONS_FILE);
             }
             es.submit(runner);
+        }
+        es.shutdown();
+        es.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+    }
+    
+    private void runBWA(final ISGEnv isg) throws InterruptedException{
+        ExecutorService es = Executors.newFixedThreadPool(NUM_THREADS);
+        SequenceFilePairMatcher matcher = new SequenceFilePairMatcher();
+        Collection<SequenceFilePair> matches = matcher.process(isg.getReadsDir());
+        
+        String refPrefix = ISG.getAbsolutePath()+"/ref";
+        new IndexRunner(BWA.getAbsolutePath(), isg.getRef(), refPrefix).run();
+        
+        for(SequenceFilePair match: matches){
+            es.submit(new BWAPipeline(BWA.getAbsolutePath(), 
+                    refPrefix, 
+                    match.getSeq1(),
+                    match.getSeq2(),
+                    match.getName(),
+                    isg.getBamDir()));
         }
         es.shutdown();
         es.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -296,6 +322,7 @@ public class ISGPipeline extends CommandLineProgram {
 
             indexFastas(isg);
             createDictionary(isg);
+            runBWA(isg);
 
             if (GATK == null) {
                 runSolSNP(isg);

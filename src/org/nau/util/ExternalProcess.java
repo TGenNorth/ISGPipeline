@@ -40,6 +40,7 @@ public class ExternalProcess {
     }
 
     public static int execute(String[] cmd, File wd, File out) {
+        System.out.println("executing: "+net.sf.samtools.util.StringUtil.join(" ", cmd));
         try {
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.directory(wd);

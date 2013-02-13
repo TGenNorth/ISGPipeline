@@ -31,6 +31,7 @@ public class ISGEnv {
     private File genBankDir;
     private File fastaDir;
     private File dupsDir;
+    private File readsDir;
     private File ref;
     private File refDict;
     private File mergeVcfFile;
@@ -69,6 +70,9 @@ public class ISGEnv {
         if (!dupsDir.isDirectory()) {
             return false;
         }
+        if (!readsDir.isDirectory()) {
+            return false;
+        }
         return true;
     }
 
@@ -100,6 +104,9 @@ public class ISGEnv {
         if (!dupsDir.isDirectory()) {
             dupsDir.mkdir();
         }
+        if (!readsDir.isDirectory()) {
+            readsDir.mkdir();
+        }
     }
 
     public void validate() throws FileNotFoundException {
@@ -121,6 +128,7 @@ public class ISGEnv {
         outDir = new File(isg.getAbsolutePath() + "/out");
         mergeVcfFile = new File(outDir.getAbsolutePath() + "/merged.vcf");
         isgOutFile = new File(outDir.getAbsolutePath() + "/isg_out.tab");
+        readsDir = new File(isg, "reads");
     }
 
     public File getVcfDir() {
@@ -141,6 +149,10 @@ public class ISGEnv {
     
     public File getDupsDir(){
         return dupsDir;
+    }
+    
+    public File getReadsDir(){
+        return readsDir;
     }
 
     public File getRef() {
@@ -163,6 +175,10 @@ public class ISGEnv {
         return refDict;
     }
 
+    public File getBamDir() {
+        return bamDir;
+    }
+    
     public File getCoordsDups() {
         return new File(mummerDir.getAbsolutePath() + "/ref.coords");
     }
