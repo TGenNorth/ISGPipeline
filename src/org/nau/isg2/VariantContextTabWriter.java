@@ -28,6 +28,7 @@ public class VariantContextTabWriter {
     
     public void writeHeader(VariantContextTabHeader header){
         this.header = header;
+        pw.printf("#%s=%d\n", "numSamples", header.getGenotypeNames().size());
         pw.print("Chrom");
         pw.print("\t");
         pw.print("Pos");
