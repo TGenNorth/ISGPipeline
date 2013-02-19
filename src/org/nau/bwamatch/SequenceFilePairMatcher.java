@@ -25,7 +25,7 @@ public class SequenceFilePairMatcher {
 
     public SequenceFilePairMatcher() {
         patterns.add(Pattern.compile("(.*)_[0-9]+_([0-9])_sequence\\.txt"));
-        patterns.add(Pattern.compile("(.*)_[ATCG]+_L[0-9]+_R([0-9])_[0-9]+\\.fastq\\.gz"));
+        patterns.add(Pattern.compile("(.*)_.*_L[0-9]+_R([0-9])_[0-9]+\\.fastq\\.gz"));
         patterns.add(Pattern.compile("(.*)_R([0-9])_[0-9]+\\.fastq\\.gz"));
         patterns.add(Pattern.compile("(.*)_R([0-9])\\.fastq\\.gz"));
         patterns.add(Pattern.compile("(.*)_([12])\\.fastq"));
