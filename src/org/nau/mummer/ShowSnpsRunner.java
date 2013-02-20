@@ -27,7 +27,7 @@ public class ShowSnpsRunner implements Runnable {
     private String[] createShowSnpsCommand() {
         List<String> ret = new ArrayList<String>();
         ret.add(env.getShowSnps().getAbsolutePath());
-        ret.add("-lrTHI");
+        ret.add("-lrTH");
         ret.add("-x");
         ret.add("10");
         ret.add(deltaFile.getAbsolutePath());
