@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="test"/>
+	<classpathentry kind="lib" path="lib/biojava-1.7.1.jar"/>
+	<classpathentry kind="lib" path="lib/bytecode.jar"/>
+	<classpathentry kind="lib" path="lib/GenomeAnalysisTK.jar"/>
+	<classpathentry kind="lib" path="lib/commons-io-2.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-tgen.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
+	<classpathentry kind="lib" path="lib/junit-4.11.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/picard-1.62.jar"/>
+	<classpathentry kind="lib" path="lib/sam-1.62.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
