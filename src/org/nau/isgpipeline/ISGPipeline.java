@@ -129,18 +129,18 @@ public class ISGPipeline extends CommandLineProgram {
         es.shutdown();
         es.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
     }
-    
-    private void runBWA(final ISGEnv isg) throws InterruptedException{
+
+    private void runBWA(final ISGEnv isg) throws InterruptedException {
         ExecutorService es = Executors.newFixedThreadPool(NUM_THREADS);
         SequenceFilePairMatcher matcher = new SequenceFilePairMatcher();
         Collection<SequenceFilePair> matches = matcher.process(isg.getReadsDir());
-        
-        String refPrefix = ISG.getAbsolutePath()+"/ref";
+
+        String refPrefix = ISG.getAbsolutePath() + "/ref";
         new IndexRunner(BWA.getAbsolutePath(), isg.getRef(), refPrefix).run();
-        
-        for(SequenceFilePair match: matches){
-            es.submit(new BWAPipeline(BWA.getAbsolutePath(), 
-                    refPrefix, 
+
+        for (SequenceFilePair match : matches) {
+            es.submit(new BWAPipeline(BWA.getAbsolutePath(),
+                    refPrefix,
                     match.getSeq1(),
                     match.getSeq2(),
                     match.getName(),
@@ -193,6 +193,7 @@ public class ISGPipeline extends CommandLineProgram {
 
         //find repeats in reference
         es.submit(new Runnable() {
+
             @Override
             public void run() {
                 final String prefix = refSampleName + "_" + refSampleName;
@@ -322,7 +323,9 @@ public class ISGPipeline extends CommandLineProgram {
 
             indexFastas(isg);
             createDictionary(isg);
-            runBWA(isg);
+            if (BWA != null) {
+                runBWA(isg);
+            }
 
             if (GATK == null) {
                 runSolSNP(isg);

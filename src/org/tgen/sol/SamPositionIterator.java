@@ -223,7 +223,7 @@ public class SamPositionIterator implements Enumeration<PositionInfo> {
 
         public SamPositionIterator (File file, int min_coverage, int max_coverage, int min_mapq, int min_mate_distance, int max_mate_distance, int min_base_quality, int min_alignment_score, String sequence, int start, int end) {
 		samReader = new SAMFileReader(file, new File(file.getAbsolutePath() + ".bai"));
-
+                samReader.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
 		assert (samReader.getFileHeader().getSortOrder() == SortOrder.coordinate); // The implementation assumes coordinates sorting.
 
 		samRecordIterator = samReader.query(sequence, start, end, true);
@@ -254,8 +254,8 @@ public class SamPositionIterator implements Enumeration<PositionInfo> {
 
 	public SamPositionIterator (File file, int min_coverage, int max_coverage, int min_mapq, int min_mate_distance, int max_mate_distance, int min_base_quality, int min_alignment_score) {
 		samReader = new SAMFileReader(file);
-
-		assert (samReader.getFileHeader().getSortOrder() == SortOrder.coordinate); // The implementation assumes coordinates sorting.
+                samReader.setValidationStringency(SAMFileReader.ValidationStringency.LENIENT);
+    		assert (samReader.getFileHeader().getSortOrder() == SortOrder.coordinate); // The implementation assumes coordinates sorting.
 		samRecordIterator = samReader.iterator();
 
 		this.minCoverage = min_coverage;

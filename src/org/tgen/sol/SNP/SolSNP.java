@@ -3,6 +3,8 @@
  */
 package org.tgen.sol.SNP;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import net.sf.picard.PicardException;
 import net.sf.picard.cmdline.CommandLineProgram;
 import net.sf.picard.cmdline.Option;
@@ -20,7 +22,23 @@ import java.io.*;
 import java.util.*;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
+import net.sf.samtools.SAMFileReader.ValidationStringency;
 import net.sf.samtools.SAMReadGroupRecord;
+import net.sf.samtools.SAMSequenceDictionary;
+import org.broadinstitute.sting.utils.codecs.vcf.VCFConstants;
+import org.broadinstitute.sting.utils.codecs.vcf.VCFFormatHeaderLine;
+import org.broadinstitute.sting.utils.codecs.vcf.VCFHeader;
+import org.broadinstitute.sting.utils.codecs.vcf.VCFHeaderLine;
+import org.broadinstitute.sting.utils.codecs.vcf.VCFHeaderLineType;
+import org.broadinstitute.sting.utils.codecs.vcf.VCFInfoHeaderLine;
+import org.broadinstitute.sting.utils.variantcontext.Allele;
+import org.broadinstitute.sting.utils.variantcontext.Genotype;
+import org.broadinstitute.sting.utils.variantcontext.GenotypeBuilder;
+import org.broadinstitute.sting.utils.variantcontext.GenotypesContext;
+import org.broadinstitute.sting.utils.variantcontext.VariantContext;
+import org.broadinstitute.sting.utils.variantcontext.VariantContextBuilder;
+import org.broadinstitute.sting.utils.variantcontext.writer.VariantContextWriter;
+import org.broadinstitute.sting.utils.variantcontext.writer.VariantContextWriterFactory;
 
 enum OutputFormat {
 
@@ -117,24 +135,27 @@ public class SolSNP extends CommandLineProgram {
         //initial assertions
         IoUtil.assertFileIsReadable(INPUT);
         IoUtil.assertFileIsReadable(REFERENCE_SEQUENCE);
-
-        //initialize output
-        if (OUTPUT != null) {
-            IoUtil.assertFileIsWritable(OUTPUT);
-            try {
-                out = new PrintWriter(OUTPUT);
-            } catch (FileNotFoundException e) {
-                // we already asserted this so we should not get here
-                throw new PicardException("Unexpected error. ", e);
-            }
-        } else {
-            out = new PrintWriter(System.out);
-        }
-
-        WriteHeader(OUTPUT_FORMAT, out);
+        IoUtil.assertFileIsWritable(OUTPUT);
 
         //initialize reference
         ReferenceSequenceFile reference_file = ReferenceSequenceFileFactory.getReferenceSequenceFile(REFERENCE_SEQUENCE);
+
+
+        SNPCallWriter writer = null;
+        switch (OUTPUT_FORMAT) {
+            case GFF:
+                try {
+                    writer = new GFFSNPCallWriter(OUTPUT);
+                } catch (IOException ex) {
+                    Logger.getLogger(SolSNP.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                break;
+            case VCF:
+                writer = new VariantContextSNPCallWriter(OUTPUT, reference_file.getSequenceDictionary(), getSampleName(INPUT));
+                break;
+            default:
+                throw new IllegalStateException("unknown OUTPUT_FORMAT: " + OUTPUT_FORMAT);
+        }
 
         //initialize auxiliary data
         InitKnownCalls();
@@ -253,6 +274,9 @@ public class SolSNP extends CommandLineProgram {
 
                     //SNP Calling!
                     char reference_nucleotide = (char) ref_array[p.position - 1];
+                    if(reference_nucleotide=='N' || !Allele.acceptableAlleleBases(Character.toString(reference_nucleotide))){
+                        continue;
+                    }
                     coverage = p.mappedBases.size();
 
                     GetKnownCall(ref_name, curp, reference_nucleotide, known_call);
@@ -284,28 +308,28 @@ public class SolSNP extends CommandLineProgram {
                     //output, according to output mode
                     switch (OUTPUT_MODE) {
                         case AllCallable:
-                            WriteRecord(out, SNP, known_call, p, reference_nucleotide);
+                            writer.WriteRecord(SNP, known_call, p, reference_nucleotide, PLOIDY);
                             break;
                         case Variants:
                             if (SNP.callType == CallType.HomozygoteNonReference || SNP.callType == CallType.Heterozygote) {
-                                WriteRecord(out, SNP, known_call, p, reference_nucleotide);
+                                writer.WriteRecord(SNP, known_call, p, reference_nucleotide, PLOIDY);
                             } else if (known_call.callType != CallType.Unknown && known_call.callType != CallType.HomozygoteReference) {
-                                WriteRecord(false_negatives_file, SNP, known_call, p, reference_nucleotide);
+                                writer.WriteRecord(SNP, known_call, p, reference_nucleotide, PLOIDY);
                             }
                             break;
                         case VariantsAndReference:
                             if (SNP.callType == CallType.HomozygoteNonReference || SNP.callType == CallType.Heterozygote || SNP.callType == CallType.HomozygoteReference) {
-                                WriteRecord(out, SNP, known_call, p, reference_nucleotide);
+                                writer.WriteRecord(SNP, known_call, p, reference_nucleotide, PLOIDY);
                             }
                             break;
                         case KnownCalls:
                             if (known_call.callType != CallType.Unknown) {
-                                WriteRecord(out, SNP, known_call, p, reference_nucleotide);
+                                writer.WriteRecord(SNP, known_call, p, reference_nucleotide, PLOIDY);
                             }
                             break;
                         case VariantsAndNonReference:
                             if (SNP.callType == CallType.HomozygoteNonReference || SNP.callType == CallType.Heterozygote || SNP.callType != CallType.HomozygoteReference) {
-                                WriteRecord(out, SNP, known_call, p, reference_nucleotide);
+                                writer.WriteRecord(SNP, known_call, p, reference_nucleotide, PLOIDY);
                             }
                             break;
                     }
@@ -314,7 +338,7 @@ public class SolSNP extends CommandLineProgram {
             }
         }
         //Finalize output
-        out.close();
+        writer.close();
 
         if (KNOWN_CALLS != null) {
             false_negatives_file.close();
@@ -325,136 +349,6 @@ public class SolSNP extends CommandLineProgram {
         }
 
         return 0;
-    }
-
-    private void WriteHeader(OutputFormat output_format, PrintWriter out) {
-        switch (output_format) {
-            case GFF:
-                break;
-            case VCF: {
-                out.println("##fileformat=VCFv4.0");
-                out.println("##source=SolSNP-" + SOLSNP_VERSION);
-                out.println("##reference=" + REFERENCE_SEQUENCE.getName());
-                out.println("##INFO=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">");
-                out.println("##INFO=<ID=CL,Number=1,Type=String,Description=\"Putative genotype call\">");
-                out.println("##INFO=<ID=KC,Number=1,Type=String,Description=\"Genotype call from known calls file\">");
-                out.println("##INFO=<ID=PL,Number=1,Type=String,Description=\"Full pileup (Uppercase is forward strand)\">");
-                out.println("##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
-                out.println("##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">");
-                out.println("##command=" + getCommandLine());
-
-                if (GENERATE_GENOTYPES) {
-                    String sample_name = getSampleName(INPUT);
-                    out.println("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + sample_name);
-                } else {
-                    out.println("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO");
-                }
-            }
-        }
-
-    }
-
-    private void WriteRecord(PrintWriter out, SNPCall SNP, SNPCall known_call, PositionInfo p, char reference_nucleotide) {
-        switch (OUTPUT_FORMAT) {
-            case GFF: {
-                out.printf("snp_%s_%d\tsolsnp-call\tsnp\t%d\t%d\t%.6f\t.\t.\tcall=%s;i=%s;ref=%s;",
-                        p.sequenceName, ++snp_count,
-                        p.position, p.position, SNP.variantProb,
-                        SNP.toString(), p.sequenceName,
-                        (char) reference_nucleotide);
-
-                out.print(SNP.misc);
-
-                for (String score : SNP.scores.keySet()) {
-                    out.printf("%s=%5.9f;", score, SNP.scores.get(score));
-                }
-
-                out.print("pileup=");
-
-                for (MappedBaseInfo b : p.mappedBases) {
-                    out.print(b.nucleotide);
-                }
-
-                out.println();
-            }
-            break;
-            case VCF: {
-                double phred_score;
-                if (SNP.allele2 == (char) reference_nucleotide) {
-                    if (SNP.variantProb == 0) {
-                        phred_score = MAX_CONFIDENCE;
-                    } else {
-                        phred_score = -10 * Math.log10(SNP.variantProb);
-                    }
-                } else if (SNP.variantProb == 1) {
-                    phred_score = MAX_CONFIDENCE;
-                } else {
-                    phred_score = -10 * Math.log10(1 - SNP.variantProb);
-                }
-
-
-                out.printf("%s\t%d\t%s\t%s\t%s\t%.1f\tPASS\tCL=%s;",
-                        p.sequenceName,
-                        p.position, (known_call.ID == null ? "." : known_call.ID),
-                        (char) reference_nucleotide,
-                        SNP.getAlternateAllele(),//(SNP.allele2 == (char) reference_nucleotide ? '.' : SNP.allele2),
-                        phred_score,
-                        SNP.toString());
-
-                if (known_call.callType != CallType.Unknown) {
-                    out.printf("KC=%s;", known_call);
-                }
-
-                out.printf("DP=%d;", p.mappedBases.size());
-                out.printf("AR=%.2f;", SolSNPCaller.CalculateAlleleBalance(p.mappedBases, reference_nucleotide));
-
-                out.print("PL=");
-
-                for (MappedBaseInfo b : p.mappedBases) {
-                    if (b.strand) {
-                        out.print(b.nucleotide);
-                    } else {
-                        out.print(Character.toLowerCase(b.nucleotide));
-                    }
-                }
-
-                if (GENERATE_GENOTYPES && SNP.callType != CallType.NoCall) {
-                    out.print("\tGT:GQ\t");
-
-                    //genotype
-                    switch (PLOIDY) {
-                        case Diploid: {
-                            if (SNP.callType == CallType.HomozygoteReference) {
-                                out.print("0/0");
-                            } else if (SNP.callType == CallType.Heterozygote) {
-                                out.print("0/1");
-                            } else {// if (SNP.callType == CallType.HomozygoteNonReference) {
-                                out.print("1/1");
-                            }
-                            break;
-                        }
-                        case Haploid: {
-                            if (SNP.callType == CallType.HomozygoteReference) {
-                                out.print("0");
-                            } else { // if (SNP.callType == CallType.HomozygoteNonReference) {
-                                out.print("1");
-                            }
-                            break;
-                        }
-                    }
-
-                    //genotype quality
-                    double genotype_score = (SNP.genotypeProb == 1 ? MAX_CONFIDENCE : -10 * Math.log10(1 - SNP.genotypeProb));
-                    out.print(":");
-                    out.printf("%.1f", Math.abs(genotype_score));
-
-                }
-
-                out.println();
-            }
-        }
-
-
     }
 
     private void InitSummaryMetrics() {
@@ -555,17 +449,8 @@ public class SolSNP extends CommandLineProgram {
                 throw new PicardException(e.getMessage());
             }
 
-            //output file header
-            WriteHeader(OUTPUT_FORMAT, false_negatives_file);
 
         }
-    }
-
-    /**
-     * @param args
-     */
-    public static void main(String[] args) {
-        System.exit(new SolSNP().instanceMain(args));
     }
 
     private SNPCall GetKnownCall(String ref_name, int position, char reference_nucleotide, SNPCall call) {
@@ -603,15 +488,226 @@ public class SolSNP extends CommandLineProgram {
 
         return call;
     }
-    
-    public static String getSampleName(File bam){
+
+    public static String getSampleName(File bam) {
         final SAMFileReader in = new SAMFileReader(bam);
         final SAMFileHeader header = in.getFileHeader();
-        if(header.getReadGroups().isEmpty()){
+        if (header.getReadGroups().isEmpty()) {
             return bam.getName().substring(0, bam.getName().lastIndexOf('.'));
-        }else{
+        } else {
             final SAMReadGroupRecord rg = header.getReadGroups().get(0);
             return rg.getSample();
         }
+    }
+
+    private static interface SNPCallWriter {
+
+        public void WriteRecord(SNPCall SNP, SNPCall known_call, PositionInfo p, char reference_nucleotide, Ploidy ploidy);
+
+        public void close();
+    }
+
+    private static class GFFSNPCallWriter implements SNPCallWriter {
+
+        private final PrintWriter pw;
+        private int snp_count = 0;
+
+        public GFFSNPCallWriter(File f) throws IOException {
+            this.pw = new PrintWriter(new BufferedWriter(new FileWriter(f)));
+        }
+
+        @Override
+        public void WriteRecord(SNPCall SNP, SNPCall known_call, PositionInfo p, char reference_nucleotide, Ploidy ploidy) {
+            pw.printf("snp_%s_%d\tsolsnp-call\tsnp\t%d\t%d\t%.6f\t.\t.\tcall=%s;i=%s;ref=%s;",
+                    p.sequenceName, ++snp_count,
+                    p.position, p.position, SNP.variantProb,
+                    SNP.toString(), p.sequenceName,
+                    (char) reference_nucleotide);
+
+            pw.print(SNP.misc);
+
+            for (String score : SNP.scores.keySet()) {
+                pw.printf("%s=%5.9f;", score, SNP.scores.get(score));
+            }
+
+            pw.print("pileup=");
+
+            for (MappedBaseInfo b : p.mappedBases) {
+                pw.print(b.nucleotide);
+            }
+
+            pw.println();
+        }
+
+        @Override
+        public void close() {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+    }
+
+    private static class VariantContextSNPCallWriter implements SNPCallWriter {
+
+        final VariantContextWriter writer;
+        final String sampleName;
+
+        public VariantContextSNPCallWriter(File f, SAMSequenceDictionary seqDict, String sampleName) {
+            this.writer = VariantContextWriterFactory.sortOnTheFly(VariantContextWriterFactory.create(f, seqDict), 1000);
+            this.sampleName = sampleName;
+            writeHeader();
+        }
+
+        private void writeHeader() {
+            Set<VCFHeaderLine> metadata = new HashSet<VCFHeaderLine>();
+            metadata.add(new VCFInfoHeaderLine(VCFConstants.DEPTH_KEY, 1, VCFHeaderLineType.Integer, "Total Depth"));
+            metadata.add(new VCFInfoHeaderLine("AR", 1, VCFHeaderLineType.String, "Allelic Balance"));
+            metadata.add(new VCFInfoHeaderLine("KC", 1, VCFHeaderLineType.String, "Genotype call from known calls file"));
+            metadata.add(new VCFFormatHeaderLine(VCFConstants.GENOTYPE_KEY, 1, VCFHeaderLineType.String, "Genotype"));
+            metadata.add(new VCFFormatHeaderLine(VCFConstants.GENOTYPE_QUALITY_KEY, 1, VCFHeaderLineType.Integer, "Genotype Quality"));
+            metadata.add(new VCFFormatHeaderLine(VCFConstants.GENOTYPE_ALLELE_DEPTHS, 1, VCFHeaderLineType.Integer, "Genotype Quality"));
+            VCFHeader header = new VCFHeader(metadata, new HashSet(Arrays.asList(sampleName)));
+            
+            writer.writeHeader(header);
+        }
+
+        @Override
+        public void WriteRecord(SNPCall SNP, SNPCall known_call, PositionInfo p, char reference_nucleotide, Ploidy ploidy) {
+
+            final VariantContextBuilder vcBldr = new VariantContextBuilder();
+
+            double log10PError;
+            if (SNP.allele2 == (char) reference_nucleotide) {
+                if (SNP.variantProb == 0) {
+                    log10PError = -3;
+                } else {
+                    log10PError = Math.log10(SNP.variantProb);
+                }
+            } else if (SNP.variantProb == 1) {
+                log10PError = -3;
+            } else {
+                log10PError = Math.log10(1 - SNP.variantProb);
+            }
+
+            
+            Allele refAllele = Allele.create((byte) reference_nucleotide, true);
+            List<Allele> altAlleles = new ArrayList<Allele>();
+            if (SNP.allele2 != reference_nucleotide) {
+                altAlleles.add(Allele.create((byte) SNP.allele2));
+            }
+            if (SNP.allele1 != SNP.allele2 && SNP.allele1 != reference_nucleotide) {
+                altAlleles.add(Allele.create((byte) SNP.allele1));
+            }
+
+            vcBldr.chr(p.sequenceName);
+            vcBldr.id((known_call.ID == null) ? "." : known_call.ID);
+            vcBldr.start(p.position);
+            vcBldr.stop(p.position);
+            vcBldr.log10PError(log10PError);
+
+            Map<String, Object> attributes = new HashMap<String, Object>();
+            attributes.put(VCFConstants.DEPTH_KEY, p.mappedBases.size());
+            if (known_call.callType != CallType.Unknown) {
+                attributes.put("KC", known_call);
+            }
+            attributes.put("AR", SolSNPCaller.CalculateAlleleBalance(p.mappedBases, reference_nucleotide));
+            vcBldr.attributes(attributes);
+
+            if (GENERATE_GENOTYPES) {
+
+                List<Allele> gAlleles = new ArrayList<Allele>();
+                
+                //genotype
+                switch (ploidy) {
+                    case Diploid: {
+                        if(SNP.callType == CallType.NoCall){
+                            gAlleles.add(Allele.NO_CALL);
+                            gAlleles.add(Allele.NO_CALL);
+                            break;
+                        }
+                        if (SNP.allele1 != reference_nucleotide) {
+                            gAlleles.add(Allele.create((byte) SNP.allele1));
+                        }
+                        if (SNP.allele2 != SNP.allele1 && SNP.allele2 != reference_nucleotide) {
+                            gAlleles.add(Allele.create((byte) SNP.allele2));
+                        }
+                        if (gAlleles.size() < 2) {
+                            gAlleles.add(refAllele);
+                        }
+                        break;
+                    }
+                    case Haploid: {
+                        if(SNP.callType == CallType.NoCall){
+                            gAlleles.add(Allele.NO_CALL);
+                            break;
+                        }
+                        if (SNP.allele2 != reference_nucleotide) {
+                            gAlleles.add(Allele.create((byte) SNP.allele2));
+                        } else {
+                            gAlleles.add(refAllele);
+                        }
+                        break;
+                    }
+                }
+
+                //genotype quality
+                double genotype_score = (SNP.genotypeProb == 1 ? MAX_CONFIDENCE : -10 * Math.log10(1 - SNP.genotypeProb));
+                Map<String, Object> attrs = new HashMap<String, Object>();
+                attrs.put(VCFConstants.GENOTYPE_QUALITY_KEY, Math.abs(genotype_score));
+                GenotypeBuilder gBldr = new GenotypeBuilder();
+                gBldr = gBldr.GQ((int)Math.abs(genotype_score));
+                gBldr = gBldr.alleles(gAlleles);
+                gBldr = gBldr.name(sampleName);
+                gBldr = gBldr.AD(calculateAD(refAllele, altAlleles, p.mappedBases));
+                List<Genotype> genotypes = Arrays.asList(gBldr.make());
+                vcBldr.genotypes(genotypes);
+                
+            }
+
+            List<Allele> alleles = new ArrayList<Allele>(altAlleles);
+            alleles.add(refAllele);
+            vcBldr.alleles(alleles);
+            VariantContext vc = vcBldr.make();
+            writer.add(vc);
+
+        }
+        
+        private int[] calculateAD(Allele ref, List<Allele> alts, List<MappedBaseInfo> bases){
+            int[] ret = new int[alts.size()+1];
+            for(MappedBaseInfo baseInfo: bases){
+                String base = Character.toString(baseInfo.nucleotide);
+                if(ref.basesMatch(base)){
+                    ret[0]++;
+                }else{
+                    for(int i=0; i<alts.size(); i++){
+                        if(alts.get(i).basesMatch(base)){
+                            ret[i+1]++;
+                        }
+                    }
+                }
+            }
+            return ret;
+        }
+
+        @Override
+        public void close() {
+            writer.close();
+        }
+    }
+    
+    /**
+     * @param args
+     */
+    public static void main(String[] args) {
+        SolSNP solsnp = new SolSNP();
+        solsnp.INPUT = new File("/Users/jbeckstrom/SolSNP/Burkholderia_pseudomallei-MSHR6891.bam");
+        solsnp.REFERENCE_SEQUENCE = new File("/Users/jbeckstrom/SolSNP/ref.fasta");
+        solsnp.OUTPUT_FORMAT = OutputFormat.VCF;
+        solsnp.OUTPUT = new File("/Users/jbeckstrom/SolSNP/snps.vcf");
+        solsnp.PLOIDY = Ploidy.Haploid;
+        solsnp.OUTPUT_MODE = OutputMode.VariantsAndNonReference;
+        solsnp.VALIDATION_STRINGENCY = ValidationStringency.LENIENT;
+                
+        solsnp.doWork();
+        
+//        System.exit(new SolSNP().instanceMain(args));
     }
 }

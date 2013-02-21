@@ -1,4 +1,4 @@
-/*
+ /*
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
@@ -80,16 +80,25 @@ public class ISG2 extends CommandLineProgram {
     public int MIN_DP = 3;
     private static final String AMBIGUOUS_CALL_STRING = "N";
     private static final Allele AMBIGUOUS_CALL = Allele.create(AMBIGUOUS_CALL_STRING);
-    private static final Filter<VariantContext> SNP_FILTER = new Filter<VariantContext>() {
+    private static final Filter<VariantContext> SNP_INDEL_FILTER = new Filter<VariantContext>() {
 
         @Override
         public boolean pass(VariantContext t) {
-            return t.isSNP();
+            return t.isSNP() || t.isIndel();
         }
     };
 
     public static void main(String[] args) {
-        System.exit(new ISG2().instanceMain(args));
+        File wd = new File("/Users/jbeckstrom/NetBeansProjects/ISGPipeline_test/test");
+        ISG2 isg = new ISG2();
+        isg.SAMPLE = Arrays.asList("MSHR1043", "MSHR1655");
+        isg.COV_DIR = new File(wd, "bams");
+        isg.GBK_DIR = new File(wd, "genBank");
+        isg.REF = new File(wd, "ref.fasta");
+        isg.VCF_DIR = new File(wd, "vcf");
+        isg.OUTPUT = new File(wd, "out/isg_out.tab");
+        isg.doWork();
+//        System.exit(new ISG2().instanceMain(args));
     }
 
     @Override
@@ -129,7 +138,7 @@ public class ISG2 extends CommandLineProgram {
                     VariantContext vc = vcMap.get(key);
                     if (vc == null) { //no snp called so check for coverage
                         SinglePassCoverageFinder cvgFinder = cvgFinders.get(key);
-                        if (cvgFinder.hasCoverage(interval)) {
+                        if (cvgFinder!=null && cvgFinder.hasCoverage(interval)) {
                             //make call: reference
                             genotypes.add(GenotypeBuilder.create(key, Arrays.asList(ref)));
                         } else {
@@ -137,13 +146,15 @@ public class ISG2 extends CommandLineProgram {
                             genotypes.add(GenotypeBuilder.create(key, Arrays.asList(Allele.NO_CALL)));
                         }
                     } else {
-                        if(!vc.getReference().equals(ref)){
-                            throw new IllegalStateException("ref alleles don't match: "+vc.getReference()+" != "+ref+" "+vc);
+                        if (!vc.getReference().equals(ref)) {
+                            throw new IllegalStateException("ref alleles don't match: " + vc.getReference() + " != " + ref + " " + vc);
                         }
                         //make call: ambiguous or snp
                         Allele a = call(vc);
                         genotypes.add(GenotypeBuilder.create(key, Arrays.asList(a)));
-                        alleles.add(a);
+                        if (!a.basesMatch(Allele.NO_CALL)) {
+                            alleles.add(a);
+                        }
                     }
                 }
 
@@ -162,17 +173,17 @@ public class ISG2 extends CommandLineProgram {
                 }
 
             }
-            
+
             vcWriter.close();
 
         } catch (IOException ex) {
             Logger.getLogger(ISG2.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
-        
+
+
         return 0;
     }
-    
+
     private List<String> createAttributes() {
         List<String> ret = new ArrayList<String>();
         if (GBK_DIR != null && GBK_DIR.listFiles().length != 0) {
@@ -205,7 +216,8 @@ public class ISG2 extends CommandLineProgram {
         for (final String sample : samplesToInclude) {
             File f = new File(dir, sample + ".interval_list");
             if (!f.exists()) {
-                throw new IllegalStateException("Could not find file: " + f.getAbsolutePath());
+                System.out.println("WARNING: Could not find file: " + f.getAbsolutePath());
+                continue;
             }
             IntervalList intervalList = IntervalList.fromFile(f);
             IntervalOverlapComparator cmp = new IntervalOverlapComparator(intervalList.getHeader());
@@ -233,7 +245,7 @@ public class ISG2 extends CommandLineProgram {
             } else if (samples.isEmpty()) {
                 throw new IllegalStateException("vcf file doesn't have any genotype samples: " + f.getAbsolutePath());
             }
-            Iterator<VariantContext> iter = new FilteringIterator<VariantContext>(getIteratorQuietly(vcfReader), SNP_FILTER);
+            Iterator<VariantContext> iter = new FilteringIterator<VariantContext>(getIteratorQuietly(vcfReader), SNP_INDEL_FILTER);
             ret.put(sample, iter);
 
         }
@@ -302,7 +314,7 @@ public class ISG2 extends CommandLineProgram {
         public VariantContextComparator(final SAMFileHeader header) {
             this(header.getSequenceDictionary());
         }
-        
+
         public VariantContextComparator(final SAMSequenceDictionary seqDict) {
             this.seqDict = seqDict;
         }

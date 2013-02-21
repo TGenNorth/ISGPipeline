@@ -24,11 +24,12 @@ public class SequenceFilePairMatcher {
     private List<Pattern> patterns = new ArrayList<Pattern>();
 
     public SequenceFilePairMatcher() {
-        patterns.add(Pattern.compile("(.*)_[0-9]+_([0-9])_sequence\\.txt"));
-        patterns.add(Pattern.compile("(.*)_[ATCG]+_L[0-9]+_R([0-9])_[0-9]+\\.fastq\\.gz"));
-        patterns.add(Pattern.compile("(.*)_R([0-9])_[0-9]+\\.fastq\\.gz"));
-        patterns.add(Pattern.compile("(.*)_R([0-9])\\.fastq\\.gz"));
-        patterns.add(Pattern.compile("(.*)_([12])\\.fastq"));
+        patterns.add(Pattern.compile("(.*)_[0-9]+_([0-9])_sequence\\..*"));
+        patterns.add(Pattern.compile("(.*)_[ATCG]+_L[0-9]+_R([0-9])_[0-9]+\\..*"));
+        patterns.add(Pattern.compile("(.*)_S[0-9]+_L[0-9]+_R([0-9])_[0-9]+\\..*"));
+        patterns.add(Pattern.compile("(.*)_R([0-9])_[0-9]+\\..*"));
+        patterns.add(Pattern.compile("(.*)_R([0-9])\\..*"));
+        patterns.add(Pattern.compile("(.*)_([12])\\..*"));
     }
 
     public Collection<SequenceFilePair> process(File seqDir) {
@@ -119,5 +120,11 @@ public class SequenceFilePairMatcher {
         SequenceFilePair sfp = new SequenceFilePair(sampleName);
         sfp.setSeq1(first);
         return sfp;
+    }
+    
+    public static void main(String[] args){
+        Pattern p = Pattern.compile("(.*)_([12])\\..*");
+        System.out.println(p.matcher("asdf_1.fastq.gz").matches());
+        System.out.println(p.matcher("asdf1.fastq").matches());
     }
 }
