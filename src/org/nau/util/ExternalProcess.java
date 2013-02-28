@@ -1,22 +1,10 @@
 package org.nau.util;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import net.sf.picard.PicardException;
 import net.sf.picard.util.Log;
 
@@ -32,24 +20,28 @@ public class ExternalProcess {
     });
 
     public static int execute(String[] cmd) {
-        return execute(cmd, null, null);
+        return execute(cmd, null);
     }
 
     public static int execute(String[] cmd, File wd) {
-        return execute(cmd, wd, null);
+        return execute(cmd, wd, new LogInfoProcessOutputReader(), new LogErrorProcessOutputReader());
+    }
+    
+    public static int execute(String[] cmd, File wd, ProcessOutputHandler outputHandle) {
+        return execute(cmd, wd, outputHandle, new LogErrorProcessOutputReader());
     }
 
-    public static int execute(String[] cmd, File wd, File out) {
+    public static int execute(String[] cmd, File wd, ProcessOutputHandler outputHandler, ProcessOutputHandler errorHandler) {
         System.out.println("executing: "+net.sf.samtools.util.StringUtil.join(" ", cmd));
         try {
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.directory(wd);
             Process p = pb.start();
 
-            final LogErrorProcessOutputReader err = new LogErrorProcessOutputReader(p.getErrorStream());
-            final Future<?> stderrReader = executorService.submit(err);
-            final ProcessOutputReader stdout = getOutput(out, p);
-            stdout.run();
+            errorHandler.setInputStream(p.getErrorStream());
+            outputHandler.setInputStream(p.getInputStream());
+            final Future<?> stderrReader = executorService.submit(errorHandler);
+            outputHandler.run();
             // wait for stderr reader to be done
             stderrReader.get();
 
@@ -59,55 +51,7 @@ public class ExternalProcess {
         }
     }
 
-    private static ProcessOutputReader getOutput(File out, Process p) throws IOException {
-        if (out != null) {
-            return new WriteFileProcessOutputReader(p.getInputStream(), out);
-        } else {
-            return new LogInfoProcessOutputReader(p.getInputStream());
-        }
-    }
-
-    /**
-     * Runnable that reads off the given stream and logs it somewhere.
-     */
-    private static abstract class ProcessOutputReader implements Runnable {
-
-        private final BufferedReader reader;
-
-        public ProcessOutputReader(final InputStream stream) {
-            reader = new BufferedReader(new InputStreamReader(stream));
-        }
-
-        @Override
-        public void run() {
-            try {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    write(line);
-                }
-            } catch (IOException e) {
-                throw new PicardException("Unexpected exception reading from process stream", e);
-            } finally {
-                close();
-            }
-        }
-
-        protected abstract void write(String message);
-
-        protected void close() {
-            try {
-                reader.close();
-            } catch (IOException ex) {
-                Logger.getLogger(ExternalProcess.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-    }
-
-    private static class LogErrorProcessOutputReader extends ProcessOutputReader {
-
-        public LogErrorProcessOutputReader(final InputStream stream) {
-            super(stream);
-        }
+    private static class LogErrorProcessOutputReader extends ProcessOutputHandlerLineReader {
 
         @Override
         protected void write(final String message) {
@@ -115,11 +59,7 @@ public class ExternalProcess {
         }
     }
 
-    private static class LogInfoProcessOutputReader extends ProcessOutputReader {
-
-        public LogInfoProcessOutputReader(final InputStream stream) {
-            super(stream);
-        }
+    private static class LogInfoProcessOutputReader extends ProcessOutputHandlerLineReader {
 
         @Override
         protected void write(final String message) {
@@ -127,24 +67,4 @@ public class ExternalProcess {
         }
     }
 
-    private static class WriteFileProcessOutputReader extends ProcessOutputReader {
-
-        private final PrintWriter pw;
-
-        public WriteFileProcessOutputReader(final InputStream stream, final File f) throws IOException {
-            super(stream);
-            pw = new PrintWriter(new FileWriter(f));
-        }
-
-        @Override
-        protected void write(final String message) {
-            pw.println(message);
-        }
-
-        @Override
-        protected void close() {
-            super.close();
-            pw.close();
-        }
-    }
 }

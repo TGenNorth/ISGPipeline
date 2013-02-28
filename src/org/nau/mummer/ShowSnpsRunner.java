@@ -9,7 +9,10 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.nau.util.ExternalProcess;
+import org.nau.util.ProcessOutputHandlerFileWriter;
 import org.tgen.commons.utils.CommandFactory;
 
 public class ShowSnpsRunner implements Runnable {
@@ -40,6 +43,10 @@ public class ShowSnpsRunner implements Runnable {
             return;
         }
         String[] cmd = createShowSnpsCommand();
-        ExternalProcess.execute(cmd, null, snpsFile);
+        try {
+            ExternalProcess.execute(cmd, null, new ProcessOutputHandlerFileWriter(snpsFile));
+        } catch (IOException ex) {
+            Logger.getLogger(ShowSnpsRunner.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }

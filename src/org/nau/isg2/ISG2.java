@@ -89,14 +89,14 @@ public class ISG2 extends CommandLineProgram {
     };
 
     public static void main(String[] args) {
-        File wd = new File("/Users/jbeckstrom/NetBeansProjects/ISGPipeline_test/test");
+        File wd = new File("/Users/jbeckstrom/isgpipeline/geomyces");
         ISG2 isg = new ISG2();
-        isg.SAMPLE = Arrays.asList("MSHR1043", "MSHR1655");
+        isg.SAMPLE = Arrays.asList("Gd000002", "Gd000003a", "Gd000079");
         isg.COV_DIR = new File(wd, "bams");
-        isg.GBK_DIR = new File(wd, "genBank");
+        isg.GBK_DIR = new File(wd, "genbank");
         isg.REF = new File(wd, "ref.fasta");
         isg.VCF_DIR = new File(wd, "vcf");
-        isg.OUTPUT = new File(wd, "out/isg_out.tab");
+        isg.OUTPUT = new File(wd, "isg_out.tab");
         isg.doWork();
 //        System.exit(new ISG2().instanceMain(args));
     }
@@ -151,6 +151,9 @@ public class ISG2 extends CommandLineProgram {
                         }
                         //make call: ambiguous or snp
                         Allele a = call(vc);
+                        if(a.basesMatch(ref)){
+                            a = ref;
+                        }
                         genotypes.add(GenotypeBuilder.create(key, Arrays.asList(a)));
                         if (!a.basesMatch(Allele.NO_CALL)) {
                             alleles.add(a);

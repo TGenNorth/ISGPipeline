@@ -5,23 +5,12 @@
 package org.nau.bwa;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import net.sf.picard.cmdline.CommandLineProgram;
-import net.sf.picard.cmdline.Option;
-import net.sf.picard.cmdline.Usage;
 import net.sf.picard.util.Log;
-import net.sf.picard.util.ProcessExecutor;
 import org.nau.picard.AddOrReplaceReadGroupsRunner;
 import org.nau.picard.BuildBamIndexRunner;
 import org.nau.picard.CleanSamRunner;
 import org.nau.picard.MarkDuplicatesRunner;
 import org.nau.util.FileUtils;
-import org.tgen.commons.pipeline.CommandUtils;
-import org.tgen.commons.utils.BWACommandFactory;
-import org.tgen.commons.utils.PicardCommandFactory;
 
 /**
  *
@@ -36,7 +25,7 @@ public class BWAPipeline implements Runnable {
     private final File read1;
     private final File read2;
     private final File outDir;
-    private final File sam;
+    private final File tmpBam;
     private final File bam;
     private final File bai;
 
@@ -51,7 +40,7 @@ public class BWAPipeline implements Runnable {
         this.read2 = read2;
         this.sampleName = sampleName;
         this.outDir = outDir;
-        sam = new File(outDir, sampleName + ".sam");
+        tmpBam = new File(outDir, sampleName + ".tmp.bam");
         bam = new File(outDir, sampleName + ".bam");
         bai = new File(outDir, sampleName + ".bai");
     }
@@ -70,25 +59,19 @@ public class BWAPipeline implements Runnable {
                 runSampe();
             }
 
-            File rgBam = new File(outDir, sampleName + ".rg.bam");
-            File cleanBam = new File(outDir, sampleName + ".rg.clean.bam");
             File metrics = new File(outDir, sampleName + ".metrics");
 
-            new AddOrReplaceReadGroupsRunner(sam, rgBam, sampleName).run();
-            new CleanSamRunner(rgBam, cleanBam).run();
-            new MarkDuplicatesRunner(cleanBam, bam, metrics).run();
+            new MarkDuplicatesRunner(tmpBam, bam, metrics).run();
             new BuildBamIndexRunner(bam, bai).run();
 
-            sam.delete();
-            rgBam.delete();
-            cleanBam.delete();
+            tmpBam.delete();
         } catch (Throwable ex) {
             log.error(ex, "");
         }
     }
 
     private void runSampe() {
-        if (FileUtils.exists(sam)) {
+        if (FileUtils.exists(tmpBam)) {
             return;
         }
         final File sai1 = new File(outDir, sampleName + "_1.sai");
@@ -96,21 +79,37 @@ public class BWAPipeline implements Runnable {
 
         new AlnRunner(bwa, refPrefix, read1, sai1).run();
         new AlnRunner(bwa, refPrefix, read2, sai2).run();
-        new SampeRunner(bwa, refPrefix, read1, read2, sai1, sai2, sam).run();
+        new SampeRunner(bwa, refPrefix, read1, read2, sai1, sai2, tmpBam, sampleName).run();
 
         sai1.delete();
         sai2.delete();
     }
 
     private void runSamse() {
-        if (FileUtils.exists(sam)) {
+        if (FileUtils.exists(tmpBam)) {
             return;
         }
         final File sai = new File(outDir, sampleName + ".sai");
 
         new AlnRunner(bwa, refPrefix, read1, sai).run();
-        new SamseRunner(bwa, refPrefix, read1, sai, sam).run();
+        new SamseRunner(bwa, refPrefix, read1, sai, tmpBam, sampleName).run();
 
         sai.delete();
+    }
+    
+    public static void main(String[] args){
+        File wd = new File("/Users/jbeckstrom/NetBeansProjects/ISGPipeline_test/test/");
+        System.setProperty("java.io.tmpdir", wd.getAbsolutePath());
+        
+        new IndexRunner("/usr/local/bin/bwa-0.6.2/bwa",
+                new File(wd, "ref.fasta"),
+                "/Users/jbeckstrom/NetBeansProjects/ISGPipeline_test/test/ref").run();
+        
+        BWAPipeline pipe = new BWAPipeline("/usr/local/bin/bwa-0.6.2/bwa", 
+                "/Users/jbeckstrom/NetBeansProjects/ISGPipeline_test/test/ref", 
+                new File(wd, "reads/Burkholderia_pseudomallei-MSHR6891_TAAGTTCG_L006_R1_001.fastq.gz"), 
+                new File(wd, "reads/Burkholderia_pseudomallei-MSHR6891_TAAGTTCG_L006_R2_001.fastq.gz"),
+                "MSHR6891", wd);
+        pipe.run();
     }
 }

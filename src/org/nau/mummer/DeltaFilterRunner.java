@@ -9,7 +9,10 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.nau.util.ExternalProcess;
+import org.nau.util.ProcessOutputHandlerFileWriter;
 import org.tgen.commons.utils.CommandFactory;
 
 public class DeltaFilterRunner implements Runnable {
@@ -39,6 +42,10 @@ public class DeltaFilterRunner implements Runnable {
             return;
         }
         String[] cmd = createDeltaFilterCommand();
-        ExternalProcess.execute(cmd, null, filterFile);
+        try {
+            ExternalProcess.execute(cmd, null, new ProcessOutputHandlerFileWriter(filterFile));
+        } catch (IOException ex) {
+            Logger.getLogger(DeltaFilterRunner.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }
