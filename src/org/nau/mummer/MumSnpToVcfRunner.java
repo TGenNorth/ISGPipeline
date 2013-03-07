@@ -4,8 +4,6 @@
  */
 package org.nau.mummer;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.nau.mummer.findcommon.*;
 import java.io.File;
 import java.io.IOException;
@@ -19,15 +17,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import net.sf.picard.PicardException;
 import net.sf.picard.reference.ReferenceSequenceFile;
 import net.sf.picard.reference.ReferenceSequenceFileFactory;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMSequenceDictionary;
 import net.sf.samtools.util.SequenceUtil;
-import org.broad.tribble.AbstractFeatureReader;
-import org.broad.tribble.CloseableTribbleIterator;
 import org.broadinstitute.sting.utils.codecs.vcf.VCFConstants;
 import org.broadinstitute.sting.utils.codecs.vcf.VCFFormatHeaderLine;
 import org.broadinstitute.sting.utils.codecs.vcf.VCFHeader;
@@ -40,7 +35,6 @@ import org.broadinstitute.sting.utils.variantcontext.VariantContext;
 import org.broadinstitute.sting.utils.variantcontext.VariantContextBuilder;
 import org.broadinstitute.sting.utils.variantcontext.writer.VariantContextWriter;
 import org.broadinstitute.sting.utils.variantcontext.writer.VariantContextWriterFactory;
-import org.tgen.commons.mummer.snp.MumSNPCodec;
 import org.tgen.commons.mummer.snp.MumSNPFeature;
 
 /**
@@ -75,11 +69,10 @@ public class MumSnpToVcfRunner implements Runnable {
 
         final ReferenceSequenceFile refSeqFile = ReferenceSequenceFileFactory.getReferenceSequenceFile(ref);
         final SAMSequenceDictionary seqDict = refSeqFile.getSequenceDictionary();
-
+        
         List<VariantContext> vcList = new ArrayList<VariantContext>();
 
-        final CloseableTribbleIterator<MumSNPFeature> iter = createMumSnpIter();
-
+        Iterator<MumSNPFeature> iter = new MumSnpIterator(snps);
         while (iter.hasNext()) {
             MumSNPFeature snp = iter.next();
 
@@ -88,33 +81,20 @@ public class MumSnpToVcfRunner implements Runnable {
             vcBldr.start(snp.getStart());
             vcBldr.stop(snp.getEnd());
 
-            if (snp.getrBase().equals(".")
-                    || !Allele.acceptableAlleleBases(snp.getrBase())
-                    || !Allele.acceptableAlleleBases(snp.getqBase())) {
-                //unsupported base call
-                continue;
-            }
-
             Allele refAllele = Allele.create(snp.getrBase(), true);
-            List<Allele> alleles;
-            Allele altAllele;
-            if (!snp.getqBase().equals(".")) {
-                altAllele = Allele.create(snp.getqBase());
-                alleles = Arrays.asList(refAllele, altAllele);
-            }else{
-                altAllele = Allele.NO_CALL;
-                alleles = Arrays.asList(refAllele);
+            Allele altAllele = Allele.create(snp.getqBase());
+            if (snp.getrNumRepeat() > 0 || snp.getqNumRepeat() > 0) {
+                altAllele = Allele.create("N");
             }
+            List<Allele> alleles = Arrays.asList(refAllele, altAllele);
 
-
-            Genotype g = GenotypeBuilder.create(sampleName, Arrays.asList(altAllele));
+            Genotype g = GenotypeBuilder.create(sampleName, alleles);
             vcBldr.genotypes(g);
             vcBldr.alleles(alleles);
 
             vcList.add(vcBldr.make());
         }
 
-        iter.close();
         Collections.sort(vcList, new VariantContextComparator(seqDict));
 
         writeToFile(vcList, sampleName, output, seqDict);
@@ -130,15 +110,6 @@ public class MumSnpToVcfRunner implements Runnable {
             writer.add(vc);
         }
         writer.close();
-    }
-
-    private CloseableTribbleIterator<MumSNPFeature> createMumSnpIter() {
-        try {
-            AbstractFeatureReader<MumSNPFeature> reader = AbstractFeatureReader.getFeatureReader(snps.getAbsolutePath(), new MumSNPCodec(), false);
-            return reader.iterator();
-        } catch (IOException ex) {
-            throw new PicardException("An error occured trying to read file", ex);
-        }
     }
 
     private static class VariantContextComparator implements Comparator<VariantContext> {
@@ -168,16 +139,5 @@ public class MumSnpToVcfRunner implements Runnable {
             }
             return retval;
         }
-    }
-
-    public static void main(String[] args) {
-        File wd = new File("/Users/jbeckstrom/NetBeansProjects/ISGPipeline_test");
-        File snps = new File(wd, "MSHR1043_MSHR1655.snps");
-        File output = new File(wd, "out.vcf");
-        File ref = new File(wd, "MSHR1043.fasta");
-        String sampleName = "MSHR1043";
-        output.delete();
-        MumSnpToVcfRunner runner = new MumSnpToVcfRunner(snps, output, ref, sampleName);
-        runner.run();
     }
 }
