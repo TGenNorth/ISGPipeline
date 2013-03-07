@@ -25,13 +25,16 @@ import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMReadGroupRecord;
 import net.sf.samtools.SAMSequenceDictionary;
+import org.broad.tribble.bed.BEDCodec;
 import org.broadinstitute.sting.utils.codecs.vcf.VCFHeader;
 import org.nau.bwa.BWAPipeline;
 import org.nau.bwa.IndexRunner;
 import org.nau.bwamatch.SequenceFilePair;
 import org.nau.bwamatch.SequenceFilePairMatcher;
 import org.nau.coverage.bam.FindCoverageRunner;
+import org.nau.coverage.coords.CoordsCoverageRunner;
 import org.nau.finddups.FindDupsRunner;
+import org.nau.gatk.CallableLociRunner;
 import org.nau.isg.tools.FindParalogsRunner;
 import org.nau.isg2.ISG2;
 import org.nau.mummer.DeltaFilterRunner;
@@ -52,7 +55,7 @@ import org.tgen.commons.vcf.VCFReader;
  */
 public class ISGPipeline extends CommandLineProgram {
 
-    @Usage(programVersion = "0.14.2")
+    @Usage(programVersion = "0.15.0.2")
     public String USAGE = "Combines SNPs into a matrix for genotyping. "
             + "Functionality includes identification of ambiguous SNPs, "
             + "identification of regions of no coverage, and annotation of "
@@ -176,7 +179,7 @@ public class ISGPipeline extends CommandLineProgram {
                     new DeltaFilterRunner(delta, filter, mummerEnv).run();
                     new ShowSnpsRunner(filter, snps, mummerEnv).run();
                     new MumSnpToVcfRunner(snps, vcf, ref, qrySampleName).run();
-                    new FindDupsRunner(coords, cov, ref).run();
+                    new CoordsCoverageRunner(coords, ref, cov).run();
                 }
             });
         }
@@ -231,14 +234,16 @@ public class ISGPipeline extends CommandLineProgram {
         es.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
     }
 
-    private void runBamCoverage(ISGEnv isg) throws InterruptedException {
+    private void runBamCoverage(final ISGEnv isg) throws InterruptedException {
         ExecutorService es = Executors.newFixedThreadPool(NUM_THREADS);
         System.out.println("running bam coverage...");
         Collection<File> bamFiles = isg.getBams();
-        for (File bamFile : bamFiles) {
-            final File out = new File(isg.getCovDir(), getSampleName(bamFile) + ".interval_list");
-            FindCoverageRunner runner = new FindCoverageRunner(bamFile, out, MIN_COVERAGE);
-            es.submit(runner);
+        for (final File bamFile : bamFiles) {
+            final String sampleName = getSampleName(bamFile);
+            final File out = new File(isg.getCovDir(), sampleName + ".bed");
+            final File summary = new File(isg.getCovDir(), sampleName + ".summary");
+            
+            es.submit(new CallableLociRunner(bamFile, out, isg.getRef(), summary));
         }
         es.shutdown();
         es.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);

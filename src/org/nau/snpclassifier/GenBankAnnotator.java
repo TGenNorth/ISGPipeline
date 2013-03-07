@@ -6,6 +6,7 @@ import net.sf.picard.reference.ReferenceSequence;
 import net.sf.picard.reference.ReferenceSequenceFile;
 import net.sf.picard.reference.ReferenceSequenceFileFactory;
 import org.apache.commons.io.FileUtils;
+import org.biojava.bio.Annotation;
 import org.biojavax.bio.seq.RichFeature;
 import org.broadinstitute.sting.utils.variantcontext.Allele;
 import org.broadinstitute.sting.utils.variantcontext.VariantContext;
@@ -69,9 +70,10 @@ public class GenBankAnnotator {
 
         if (gene != null) {
 
-            String locusTag = gbk.getValue("locus_tag", gene);
-            int max = gene.getLocation().getMax();
-            int min = gene.getLocation().getMin();
+            final String locusTag = getValue("locus_tag", gene);
+            final String product = getValue("product", gene);
+            final int max = gene.getLocation().getMax();
+            final int min = gene.getLocation().getMin();
 
             attribs.put("geneStart", min);
             attribs.put("geneEnd", max);
@@ -131,6 +133,15 @@ public class GenBankAnnotator {
         VariantContextBuilder vcBuilder = new VariantContextBuilder(vc);
         vcBuilder.attributes(attribs);
         return vcBuilder.make();
+    }
+    
+    private String getValue(String key, RichFeature feature){
+        final Annotation annot = feature.getAnnotation();
+        if(annot.containsProperty(key)){
+            return (String) annot.getProperty(key);
+        }else{
+            return "";
+        }
     }
 
     private RichFeature getFeatureByType(String type, List<RichFeature> featureList) {

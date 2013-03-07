@@ -4,6 +4,7 @@
  */
 package org.nau.isg2;
 
+import org.broadinstitute.sting.gatk.walkers.coverage.CallableLoci.CalledState;
 import org.nau.isg2.util.Filter;
 import org.nau.isg2.util.SkimmingIterator;
 import org.nau.isg2.util.FilteringIterator;
@@ -32,6 +33,8 @@ import net.sf.picard.util.IntervalList;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMSequenceDictionary;
+import org.broad.tribble.AbstractFeatureReader;
+import org.broad.tribble.CloseableTribbleIterator;
 import org.broad.tribble.FeatureReader;
 import org.broadinstitute.sting.utils.codecs.vcf.VCFCodec;
 import org.broadinstitute.sting.utils.codecs.vcf.VCFConstants;
@@ -41,8 +44,11 @@ import org.broadinstitute.sting.utils.variantcontext.Genotype;
 import org.broadinstitute.sting.utils.variantcontext.VariantContext;
 import org.broadinstitute.sting.utils.variantcontext.VariantContextBuilder;
 import org.broad.tribble.TribbleIndexedFeatureReader;
+import org.broad.tribble.bed.BEDCodec;
+import org.broad.tribble.bed.BEDFeature;
 import org.broadinstitute.sting.utils.variantcontext.GenotypeBuilder;
 import org.nau.snpclassifier.GenBankAnnotator;
+import org.nau.util.FileUtils;
 
 /**
  *
@@ -84,20 +90,21 @@ public class ISG2 extends CommandLineProgram {
 
         @Override
         public boolean pass(VariantContext t) {
-            return t.isSNP() || t.isIndel();
+            return t.getStart()==t.getEnd() && (t.isSNP() || t.isIndel());
         }
     };
 
     public static void main(String[] args) {
-        File wd = new File("/Users/jbeckstrom/isgpipeline/geomyces");
-        ISG2 isg = new ISG2();
-        isg.SAMPLE = Arrays.asList("Gd000002", "Gd000003a", "Gd000079");
-        isg.COV_DIR = new File(wd, "bams");
-        isg.GBK_DIR = new File(wd, "genbank");
-        isg.REF = new File(wd, "ref.fasta");
-        isg.VCF_DIR = new File(wd, "vcf");
-        isg.OUTPUT = new File(wd, "isg_out.tab");
-        isg.doWork();
+        System.out.println(System.getProperty("java.home"));
+//        File wd = new File("/Users/jbeckstrom/isgpipeline/geomyces");
+//        ISG2 isg = new ISG2();
+//        isg.SAMPLE = Arrays.asList("Gd000002", "Gd000003a", "Gd000079");
+//        isg.COV_DIR = new File(wd, "bams");
+//        isg.GBK_DIR = new File(wd, "genbank");
+//        isg.REF = new File(wd, "ref.fasta");
+//        isg.VCF_DIR = new File(wd, "vcf");
+//        isg.OUTPUT = new File(wd, "isg_out.tab");
+//        isg.doWork();
 //        System.exit(new ISG2().instanceMain(args));
     }
 
@@ -110,7 +117,7 @@ public class ISG2 extends CommandLineProgram {
         final Set<String> keys = new HashSet<String>(SAMPLE);
         final Map<String, Iterator<VariantContext>> vcfIters = getVariantContextIters(VCF_DIR, keys);
         final SkimmingIterator<VariantContext> masterVcfIter = new SkimmingIterator(vcfIters, vcComparator);
-        final Map<String, SinglePassCoverageFinder> cvgFinders = getCoverageFinders(COV_DIR, keys);
+        final Map<String, LociStateCaller> lociCallers = getCoverageFinders(COV_DIR, keys);
         final GenBankAnnotator snpClassifier = new GenBankAnnotator(GBK_DIR, REF);
 
         try {
@@ -125,25 +132,35 @@ public class ISG2 extends CommandLineProgram {
                 Map<String, VariantContext> vcMap = masterVcfIter.next();
 
                 VariantContext vcTop = vcMap.values().iterator().next();
-
+                
                 final Allele ref = vcTop.getReference();
-                final Interval interval = new Interval(vcTop.getChr(), vcTop.getStart(), vcTop.getEnd());
-
                 //make calls
                 List<Genotype> genotypes = new ArrayList<Genotype>();
-                Set<Allele> alleles = new HashSet<Allele>();
-                alleles.add(ref);
 
                 for (String key : keys) {
                     VariantContext vc = vcMap.get(key);
                     if (vc == null) { //no snp called so check for coverage
-                        SinglePassCoverageFinder cvgFinder = cvgFinders.get(key);
-                        if (cvgFinder!=null && cvgFinder.hasCoverage(interval)) {
-                            //make call: reference
-                            genotypes.add(GenotypeBuilder.create(key, Arrays.asList(ref)));
-                        } else {
-                            //make call: no coverage
+                        LociStateCaller lociCaller = lociCallers.get(key);
+                        if(lociCaller==null){
                             genotypes.add(GenotypeBuilder.create(key, Arrays.asList(Allele.NO_CALL)));
+                        }else{
+                            final CalledState calledState = lociCaller.call(vcTop.getChr(), vcTop.getStart());
+                            switch(calledState){
+                                case CALLABLE:
+                                    genotypes.add(GenotypeBuilder.create(key, Arrays.asList(ref)));
+                                    break;
+                                case NO_COVERAGE:
+                                    genotypes.add(GenotypeBuilder.create(key, Arrays.asList(Allele.NO_CALL)));
+                                    break;
+                                case EXCESSIVE_COVERAGE:
+                                case LOW_COVERAGE:
+                                case POOR_MAPPING_QUALITY:
+                                case REF_N:
+                                    genotypes.add(GenotypeBuilder.create(key, Arrays.asList(AMBIGUOUS_CALL)));
+                                    break;
+                                default:
+                                    throw new IllegalStateException("Unknown called state: "+calledState);
+                            }
                         }
                     } else {
                         if (!vc.getReference().equals(ref)) {
@@ -155,12 +172,20 @@ public class ISG2 extends CommandLineProgram {
                             a = ref;
                         }
                         genotypes.add(GenotypeBuilder.create(key, Arrays.asList(a)));
-                        if (!a.basesMatch(Allele.NO_CALL)) {
+                    }
+                }
+
+                final Set<Allele> alleles = new HashSet<Allele>();
+                //populate alleles from genotypes
+                alleles.add(ref);
+                for(Genotype g: genotypes){
+                    for(Allele a: g.getAlleles()){
+                        if(!a.basesMatch(Allele.NO_CALL)){
                             alleles.add(a);
                         }
                     }
                 }
-
+                
                 VariantContextBuilder builder = new VariantContextBuilder("source", vcTop.getChr(), vcTop.getStart(), vcTop.getEnd(), alleles);
                 builder.genotypes(genotypes);
 
@@ -214,18 +239,21 @@ public class ISG2 extends CommandLineProgram {
         return false;
     }
 
-    private Map<String, SinglePassCoverageFinder> getCoverageFinders(File dir, Set<String> samplesToInclude) {
-        final Map<String, SinglePassCoverageFinder> cvgFinders = new HashMap<String, SinglePassCoverageFinder>();
+    private Map<String, LociStateCaller> getCoverageFinders(File dir, Set<String> samplesToInclude) {
+        final Map<String, LociStateCaller> cvgFinders = new HashMap<String, LociStateCaller>();
+        final String extensions[] = {".bed", ".interval_list"};
         for (final String sample : samplesToInclude) {
-            File f = new File(dir, sample + ".interval_list");
-            if (!f.exists()) {
-                System.out.println("WARNING: Could not find file: " + f.getAbsolutePath());
+            File f = FileUtils.findFileUsingExtensions(dir, sample, extensions);
+            if (f==null) {
+                System.out.println("WARNING: Could not find coverage file for sample: "+sample);
                 continue;
             }
-            IntervalList intervalList = IntervalList.fromFile(f);
-            IntervalOverlapComparator cmp = new IntervalOverlapComparator(intervalList.getHeader());
-            SinglePassCoverageFinder covFinder = new SinglePassCoverageFinder(intervalList.iterator(), cmp);
-            cvgFinders.put(sample, covFinder);
+            try {
+                LociStateCaller lociStateCaller = LociStateCallerFactory.createFromFile(f);
+                cvgFinders.put(sample, lociStateCaller);
+            } catch (IOException ex) {
+                Logger.getLogger(ISG2.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
         return cvgFinders;
     }
@@ -282,31 +310,6 @@ public class ISG2 extends CommandLineProgram {
             return AMBIGUOUS_CALL;
         }
         return vc.getAlternateAllele(0);
-    }
-
-    private static class SinglePassCoverageFinder {
-
-        private final Iterator<Interval> iter;
-        private final IntervalOverlapComparator cmp;
-        private Interval currentInterval;
-
-        public SinglePassCoverageFinder(Iterator<Interval> iter, IntervalOverlapComparator cmp) {
-            this.iter = iter;
-            this.cmp = cmp;
-            if (iter.hasNext()) {
-                currentInterval = iter.next();
-            }
-        }
-
-        public boolean hasCoverage(Interval interval) {
-            if (currentInterval == null) {
-                return false;
-            }
-            while (iter.hasNext() && cmp.compare(interval, currentInterval) > 0) {
-                currentInterval = iter.next();
-            }
-            return (cmp.compare(interval, currentInterval) == 0);
-        }
     }
 
     private static class VariantContextComparator implements Comparator<VariantContext> {

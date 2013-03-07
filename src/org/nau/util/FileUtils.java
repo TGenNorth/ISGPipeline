@@ -28,4 +28,13 @@ public class FileUtils {
         return f.exists() && f.length() > 0;
     }
     
+    public static File findFileUsingExtensions(File dir, String prefix, String[] extensions){
+        for(String ext: extensions){
+            File f = new File(dir, prefix + ext);
+            if(f.exists()){
+                return f;
+            }
+        }
+        return null;
+    }
 }
