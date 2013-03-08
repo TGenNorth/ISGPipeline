@@ -165,21 +165,34 @@ public class ISGPipeline extends CommandLineProgram {
                 @Override
                 public void run() {
                     final String qrySampleName = FileUtils.stripExtension(qryFasta);
-                    final String prefix = refSampleName + "_" + qrySampleName;
+                    final String refQryPrefix = refSampleName + "_" + qrySampleName;
+                    final String qryRefPrefix = qrySampleName + "_" + refSampleName;
 
                     File ref = isg.getRef();
-                    File delta = new File(mummerEnv.getMumOutDir(), prefix + ".delta");
-                    File coords = new File(mummerEnv.getMumOutDir(), prefix + ".coords");
-                    File filter = new File(mummerEnv.getMumOutDir(), prefix + ".filter");
-                    File snps = new File(mummerEnv.getMumOutDir(), prefix + ".snps");
                     File vcf = new File(isg.getVcfDir(), qrySampleName + ".vcf");
                     File cov = new File(isg.getCovDir(), qrySampleName + ".interval_list");
-
-                    new NucmerRunner(prefix, ref, qryFasta, mummerEnv).run();
-                    new DeltaFilterRunner(delta, filter, mummerEnv).run();
-                    new ShowSnpsRunner(filter, snps, mummerEnv).run();
-                    new MumSnpToVcfRunner(snps, vcf, ref, qrySampleName).run();
-                    new CoordsCoverageRunner(coords, ref, cov).run();
+                    
+                    File refQryDelta = new File(mummerEnv.getMumOutDir(), refQryPrefix + ".delta");
+                    File refQryCoords = new File(mummerEnv.getMumOutDir(), refQryPrefix + ".coords");
+                    File refQryFilter = new File(mummerEnv.getMumOutDir(), refQryPrefix + ".filter");
+                    File refQrySnps = new File(mummerEnv.getMumOutDir(), refQryPrefix + ".snps");
+                    
+                    File qryRefDelta = new File(mummerEnv.getMumOutDir(), qryRefPrefix + ".delta");
+                    File qryRefFilter = new File(mummerEnv.getMumOutDir(), qryRefPrefix + ".filter");
+                    File qryRefSnps = new File(mummerEnv.getMumOutDir(), qryRefPrefix + ".snps");
+                    
+                    //run nucmer ref vs qry
+                    new NucmerRunner(refQryPrefix, ref, qryFasta, mummerEnv).run();
+                    new DeltaFilterRunner(refQryDelta, refQryFilter, mummerEnv).run();
+                    new ShowSnpsRunner(refQryFilter, refQrySnps, mummerEnv).run();
+                    
+                    //run nucmer qry vs ref
+                    new NucmerRunner(qryRefPrefix, qryFasta, ref, mummerEnv).run();
+                    new DeltaFilterRunner(qryRefDelta, qryRefFilter, mummerEnv).run();
+                    new ShowSnpsRunner(qryRefFilter, qryRefSnps, mummerEnv).run();
+                    
+                    new MumSnpToVcfRunner(refQrySnps, vcf, ref, qrySampleName).run();
+                    new CoordsCoverageRunner(refQryCoords, ref, cov).run();
                 }
             });
         }
@@ -225,7 +238,6 @@ public class ISGPipeline extends CommandLineProgram {
                     File paralogs = new File(isg.getDupsDir(), sampleName + ".interval_list");
 
                     new NucmerRunner(selfPrefix, fastaFile, mummerEnv).run();
-                    new NucmerRunner(refPrefix, fastaFile, ref, mummerEnv).run();
                     new FindParalogsRunner(selfCoords, refCoords, paralogs, ref).run();
                 }
             });
