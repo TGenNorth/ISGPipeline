@@ -32,7 +32,7 @@ public class AlnRunner implements Runnable {
         ret.add("aln");
         if(isIllumina()){
             ret.add("-I");
-        }
+        } 
         ret.add("-f");
         ret.add(saiFile.getAbsolutePath());
         ret.add(refPrefix);

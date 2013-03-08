@@ -55,7 +55,7 @@ import org.tgen.commons.vcf.VCFReader;
  */
 public class ISGPipeline extends CommandLineProgram {
 
-    @Usage(programVersion = "0.15.0.2")
+    @Usage(programVersion = "0.15.1.2")
     public String USAGE = "Combines SNPs into a matrix for genotyping. "
             + "Functionality includes identification of ambiguous SNPs, "
             + "identification of regions of no coverage, and annotation of "
