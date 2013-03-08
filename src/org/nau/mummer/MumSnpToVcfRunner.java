@@ -50,16 +50,18 @@ import org.tgen.commons.mummer.snp.MumSNPFeature;
  */
 public class MumSnpToVcfRunner implements Runnable {
 
-    private File snps;
-    private File output;
-    private String sampleName;
-    private File ref;
+    private final File snps;
+    private final File output;
+    private final String sampleName;
+    private final File ref;
+    private final SNPAlleleCaller<MumSNPFeature> snpAlleleCaller;
 
     public MumSnpToVcfRunner(File snps, File output, File ref, String sampleName) {
         this.snps = snps;
         this.output = output;
         this.sampleName = sampleName;
         this.ref = ref;
+        this.snpAlleleCaller = new DefaultMumSNPAlleleCaller();
     }
 
     private boolean exists() {
@@ -83,29 +85,25 @@ public class MumSnpToVcfRunner implements Runnable {
         while (iter.hasNext()) {
             MumSNPFeature snp = iter.next();
 
-            VariantContextBuilder vcBldr = new VariantContextBuilder();
-            vcBldr.chr(snp.getChr());
-            vcBldr.start(snp.getStart());
-            vcBldr.stop(snp.getEnd());
-
             if (snp.getrBase().equals(".")
                     || !Allele.acceptableAlleleBases(snp.getrBase())
                     || !Allele.acceptableAlleleBases(snp.getqBase())) {
                 //unsupported base call
                 continue;
             }
+            
+            VariantContextBuilder vcBldr = new VariantContextBuilder();
+            vcBldr.chr(snp.getChr());
+            vcBldr.start(snp.getStart());
+            vcBldr.stop(snp.getEnd());
 
-            Allele refAllele = Allele.create(snp.getrBase(), true);
-            List<Allele> alleles;
-            Allele altAllele;
-            if (!snp.getqBase().equals(".")) {
-                altAllele = Allele.create(snp.getqBase());
-                alleles = Arrays.asList(refAllele, altAllele);
-            }else{
-                altAllele = Allele.NO_CALL;
-                alleles = Arrays.asList(refAllele);
+            final Allele refAllele = snpAlleleCaller.callReference(snp);
+            final Allele altAllele = snpAlleleCaller.callAlternate(snp);
+            
+            List<Allele> alleles = Arrays.asList(refAllele);
+            if (altAllele != Allele.NO_CALL) {
+                alleles.add(altAllele);
             }
-
 
             Genotype g = GenotypeBuilder.create(sampleName, Arrays.asList(altAllele));
             vcBldr.genotypes(g);
