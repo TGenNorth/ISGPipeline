@@ -4,6 +4,7 @@
  */
 package org.nau.isg2;
 
+import isgtools.snpclassifier.GenBankAnnotator;
 import org.broadinstitute.sting.gatk.walkers.coverage.CallableLoci.CalledState;
 import org.nau.isg2.util.Filter;
 import org.nau.isg2.util.SkimmingIterator;
@@ -47,7 +48,8 @@ import org.broad.tribble.TribbleIndexedFeatureReader;
 import org.broad.tribble.bed.BEDCodec;
 import org.broad.tribble.bed.BEDFeature;
 import org.broadinstitute.sting.utils.variantcontext.GenotypeBuilder;
-import org.nau.snpclassifier.GenBankAnnotator;
+import org.nau.isg.matrix.VariantContextTabHeader;
+import org.nau.isg.matrix.VariantContextTabWriter;
 import org.nau.util.FileUtils;
 
 /**
@@ -90,7 +92,7 @@ public class ISG2 extends CommandLineProgram {
 
         @Override
         public boolean pass(VariantContext t) {
-            return t.getStart()==t.getEnd() && (t.isSNP() || t.isIndel());
+            return t.getStart() == t.getEnd() && (t.isSNP() || t.isIndel());
         }
     };
 
@@ -120,114 +122,99 @@ public class ISG2 extends CommandLineProgram {
         final Map<String, LociStateCaller> lociCallers = getCoverageFinders(COV_DIR, keys);
         final GenBankAnnotator snpClassifier = new GenBankAnnotator(GBK_DIR, REF);
 
-        try {
-            VariantContextTabHeader vcHeader = new VariantContextTabHeader(createAttributes(), keys);
-            VariantContextTabWriter vcWriter = new VariantContextTabWriter(OUTPUT);
-            vcWriter.writeHeader(vcHeader);
+        VariantContextTabHeader vcHeader = new VariantContextTabHeader(Collections.EMPTY_LIST, keys);
+        vcHeader = snpClassifier.annotate(vcHeader);
+        VariantContextTabWriter vcWriter = openFileForWriting(OUTPUT);
+        vcWriter.writeHeader(vcHeader);
 
-            long written = 0;
-            System.out.println("processing...");
-            while (masterVcfIter.hasNext()) {
+        long written = 0;
+        System.out.println("processing...");
+        while (masterVcfIter.hasNext()) {
 
-                Map<String, VariantContext> vcMap = masterVcfIter.next();
+            Map<String, VariantContext> vcMap = masterVcfIter.next();
 
-                VariantContext vcTop = vcMap.values().iterator().next();
-                
-                final Allele ref = vcTop.getReference();
-                //make calls
-                List<Genotype> genotypes = new ArrayList<Genotype>();
+            VariantContext vcTop = vcMap.values().iterator().next();
 
-                for (String key : keys) {
-                    VariantContext vc = vcMap.get(key);
-                    if (vc == null) { //no snp called so check for coverage
-                        LociStateCaller lociCaller = lociCallers.get(key);
-                        if(lociCaller==null){
-                            genotypes.add(GenotypeBuilder.create(key, Arrays.asList(Allele.NO_CALL)));
-                        }else{
-                            final CalledState calledState = lociCaller.call(vcTop.getChr(), vcTop.getStart());
-                            switch(calledState){
-                                case CALLABLE:
-                                    genotypes.add(GenotypeBuilder.create(key, Arrays.asList(ref)));
-                                    break;
-                                case NO_COVERAGE:
-                                    genotypes.add(GenotypeBuilder.create(key, Arrays.asList(Allele.NO_CALL)));
-                                    break;
-                                case EXCESSIVE_COVERAGE:
-                                case LOW_COVERAGE:
-                                case POOR_MAPPING_QUALITY:
-                                case REF_N:
-                                    genotypes.add(GenotypeBuilder.create(key, Arrays.asList(AMBIGUOUS_CALL)));
-                                    break;
-                                default:
-                                    throw new IllegalStateException("Unknown called state: "+calledState);
-                            }
-                        }
+            final Allele ref = vcTop.getReference();
+            //make calls
+            List<Genotype> genotypes = new ArrayList<Genotype>();
+
+            for (String key : keys) {
+                VariantContext vc = vcMap.get(key);
+                if (vc == null) { //no snp called so check for coverage
+                    LociStateCaller lociCaller = lociCallers.get(key);
+                    if (lociCaller == null) {
+                        genotypes.add(GenotypeBuilder.create(key, Arrays.asList(Allele.NO_CALL)));
                     } else {
-                        if (!vc.getReference().equals(ref)) {
-                            throw new IllegalStateException("ref alleles don't match: " + vc.getReference() + " != " + ref + " " + vc);
-                        }
-                        //make call: ambiguous or snp
-                        Allele a = call(vc);
-                        if(a.basesMatch(ref)){
-                            a = ref;
-                        }
-                        genotypes.add(GenotypeBuilder.create(key, Arrays.asList(a)));
-                    }
-                }
-
-                final Set<Allele> alleles = new HashSet<Allele>();
-                //populate alleles from genotypes
-                alleles.add(ref);
-                for(Genotype g: genotypes){
-                    for(Allele a: g.getAlleles()){
-                        if(!a.basesMatch(Allele.NO_CALL)){
-                            alleles.add(a);
+                        final CalledState calledState = lociCaller.call(vcTop.getChr(), vcTop.getStart());
+                        switch (calledState) {
+                            case CALLABLE:
+                                genotypes.add(GenotypeBuilder.create(key, Arrays.asList(ref)));
+                                break;
+                            case NO_COVERAGE:
+                                genotypes.add(GenotypeBuilder.create(key, Arrays.asList(Allele.NO_CALL)));
+                                break;
+                            case EXCESSIVE_COVERAGE:
+                            case LOW_COVERAGE:
+                            case POOR_MAPPING_QUALITY:
+                            case REF_N:
+                                genotypes.add(GenotypeBuilder.create(key, Arrays.asList(AMBIGUOUS_CALL)));
+                                break;
+                            default:
+                                throw new IllegalStateException("Unknown called state: " + calledState);
                         }
                     }
-                }
-                
-                VariantContextBuilder builder = new VariantContextBuilder("source", vcTop.getChr(), vcTop.getStart(), vcTop.getEnd(), alleles);
-                builder.genotypes(genotypes);
-
-                VariantContext vc = builder.make();
-
-                //print snps to file
-                if (isSNP(vc)) {
-                    vc = snpClassifier.annotate(vc);
-                    vcWriter.add(vc);
-                    if (++written % 100000 == 0) {
-                        System.out.println("Written " + written + " records.");
+                } else {
+                    if (!vc.getReference().equals(ref)) {
+                        throw new IllegalStateException("ref alleles don't match: " + vc.getReference() + " != " + ref + " " + vc);
                     }
+                    //make call: ambiguous or snp
+                    Allele a = call(vc);
+                    if (a.basesMatch(ref)) {
+                        a = ref;
+                    }
+                    genotypes.add(GenotypeBuilder.create(key, Arrays.asList(a)));
                 }
-
             }
 
-            vcWriter.close();
+            final Set<Allele> alleles = new HashSet<Allele>();
+            //populate alleles from genotypes
+            alleles.add(ref);
+            for (Genotype g : genotypes) {
+                for (Allele a : g.getAlleles()) {
+                    if (!a.basesMatch(Allele.NO_CALL)) {
+                        alleles.add(a);
+                    }
+                }
+            }
 
-        } catch (IOException ex) {
-            Logger.getLogger(ISG2.class.getName()).log(Level.SEVERE, null, ex);
+            VariantContextBuilder builder = new VariantContextBuilder("source", vcTop.getChr(), vcTop.getStart(), vcTop.getEnd(), alleles);
+            builder.genotypes(genotypes);
+
+            VariantContext vc = builder.make();
+
+            //print snps to file
+            if (isSNP(vc)) {
+                vc = snpClassifier.annotate(vc);
+                vcWriter.add(vc);
+                if (++written % 100000 == 0) {
+                    System.out.println("Written " + written + " records.");
+                }
+            }
+
         }
 
+        vcWriter.close();
 
         return 0;
     }
 
-    private List<String> createAttributes() {
-        List<String> ret = new ArrayList<String>();
-        if (GBK_DIR != null && GBK_DIR.listFiles().length != 0) {
-            ret.add("refCodon");
-            ret.add("derivedCodon");
-            ret.add("refAA");
-            ret.add("derivedAA");
-            ret.add("snpType");
-            ret.add("genePos");
-            ret.add("locusTag");
-            ret.add("snpStrand");
-            ret.add("geneStart");
-            ret.add("geneEnd");
-            ret.add("geneStrand");
+    private VariantContextTabWriter openFileForWriting(File f) {
+        try {
+            return new VariantContextTabWriter(f);
+        } catch (IOException ex) {
+            throw new IllegalStateException("An error occurred opening file: " + f.getAbsolutePath(), ex);
         }
-        return ret;
     }
 
     public static boolean isSNP(VariantContext vc) {
@@ -244,8 +231,8 @@ public class ISG2 extends CommandLineProgram {
         final String extensions[] = {".bed", ".interval_list"};
         for (final String sample : samplesToInclude) {
             File f = FileUtils.findFileUsingExtensions(dir, sample, extensions);
-            if (f==null) {
-                System.out.println("WARNING: Could not find coverage file for sample: "+sample);
+            if (f == null) {
+                System.out.println("WARNING: Could not find coverage file for sample: " + sample);
                 continue;
             }
             try {

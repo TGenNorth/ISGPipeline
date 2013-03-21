@@ -54,6 +54,10 @@ public class GenBankAnnotator {
     }
     
     public VariantContextTabHeader annotate(VariantContextTabHeader header){
+        if (gbks.isEmpty()) {
+            return header;
+        }
+        
         for(final GbkAttr attrName: GbkAttr.values()){
             header = header.addAttribute(attrName.name());
         }
