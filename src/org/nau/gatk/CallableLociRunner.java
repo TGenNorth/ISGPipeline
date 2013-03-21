@@ -39,6 +39,7 @@ public class CallableLociRunner implements Runnable{
         ret.add("-cp");
         ret.add(System.getProperty("java.class.path"));
         ret.add("org.broadinstitute.sting.gatk.CommandLineGATK");
+        ret.add("-allowPotentiallyMisencodedQuals");
         ret.add("-T");
         ret.add("CallableLoci");
         ret.add("-I");

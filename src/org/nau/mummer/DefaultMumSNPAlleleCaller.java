@@ -8,7 +8,7 @@ import org.broadinstitute.sting.utils.variantcontext.Allele;
 import org.tgen.commons.mummer.snp.MumSNPFeature;
 
 /**
- *
+ * 
  * @author jbeckstrom
  */
 public class DefaultMumSNPAlleleCaller implements SNPAlleleCaller<MumSNPFeature> {

@@ -20,19 +20,26 @@ public class ShowSnpsRunner implements Runnable {
     private final File deltaFile;
     private final File snpsFile;
     private final MummerEnv env;
+    private final boolean sortByQuery;
 
     public ShowSnpsRunner(File deltaFile, File snpsFile, MummerEnv env) {
+        this(deltaFile, snpsFile, false, env);
+    }
+    
+    public ShowSnpsRunner(File deltaFile, File snpsFile, boolean sortByQuery, MummerEnv env) {
         this.deltaFile = deltaFile;
         this.snpsFile = snpsFile;
+        this.sortByQuery = sortByQuery;
         this.env = env;
     }
     
     private String[] createShowSnpsCommand() {
         List<String> ret = new ArrayList<String>();
         ret.add(env.getShowSnps().getAbsolutePath());
-        ret.add("-lrTH");
+        ret.add("-lTH");
         ret.add("-x");
         ret.add("10");
+        ret.add(sortByQuery ? "-q" : "-r");
         ret.add(deltaFile.getAbsolutePath());
         return ret.toArray(new String[ret.size()]);
     }

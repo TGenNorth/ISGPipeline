@@ -20,6 +20,8 @@ import java.util.logging.Logger;
 import net.sf.picard.cmdline.CommandLineProgram;
 import net.sf.picard.cmdline.Option;
 import net.sf.picard.cmdline.Usage;
+import net.sf.picard.reference.ReferenceSequenceFile;
+import net.sf.picard.reference.ReferenceSequenceFileFactory;
 import net.sf.picard.sam.CreateSequenceDictionary;
 import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
@@ -38,6 +40,7 @@ import org.nau.gatk.CallableLociRunner;
 import org.nau.isg.tools.FindParalogsRunner;
 import org.nau.isg2.ISG2;
 import org.nau.mummer.DeltaFilterRunner;
+import org.nau.mummer.MumSnpToVcf2;
 import org.nau.mummer.MumSnpToVcfRunner;
 import org.nau.mummer.MummerEnv;
 import org.nau.mummer.NucmerRunner;
@@ -168,30 +171,32 @@ public class ISGPipeline extends CommandLineProgram {
                     final String refQryPrefix = refSampleName + "_" + qrySampleName;
                     final String qryRefPrefix = qrySampleName + "_" + refSampleName;
 
-                    File ref = isg.getRef();
-                    File vcf = new File(isg.getVcfDir(), qrySampleName + ".vcf");
-                    File cov = new File(isg.getCovDir(), qrySampleName + ".interval_list");
-                    
+                    final File ref = isg.getRef();
+                    final ReferenceSequenceFile refSeqFile = ReferenceSequenceFileFactory.getReferenceSequenceFile(ref);
+                    final SAMSequenceDictionary seqDict = refSeqFile.getSequenceDictionary();
+                    final File vcf = new File(isg.getVcfDir(), qrySampleName + ".vcf");
+                    final File cov = new File(isg.getCovDir(), qrySampleName + ".interval_list");
+
                     File refQryDelta = new File(mummerEnv.getMumOutDir(), refQryPrefix + ".delta");
                     File refQryCoords = new File(mummerEnv.getMumOutDir(), refQryPrefix + ".coords");
                     File refQryFilter = new File(mummerEnv.getMumOutDir(), refQryPrefix + ".filter");
                     File refQrySnps = new File(mummerEnv.getMumOutDir(), refQryPrefix + ".snps");
-                    
+
                     File qryRefDelta = new File(mummerEnv.getMumOutDir(), qryRefPrefix + ".delta");
                     File qryRefFilter = new File(mummerEnv.getMumOutDir(), qryRefPrefix + ".filter");
                     File qryRefSnps = new File(mummerEnv.getMumOutDir(), qryRefPrefix + ".snps");
-                    
+
                     //run nucmer ref vs qry
                     new NucmerRunner(refQryPrefix, ref, qryFasta, mummerEnv).run();
                     new DeltaFilterRunner(refQryDelta, refQryFilter, mummerEnv).run();
                     new ShowSnpsRunner(refQryFilter, refQrySnps, mummerEnv).run();
-                    
+
                     //run nucmer qry vs ref
                     new NucmerRunner(qryRefPrefix, qryFasta, ref, mummerEnv).run();
                     new DeltaFilterRunner(qryRefDelta, qryRefFilter, mummerEnv).run();
-                    new ShowSnpsRunner(qryRefFilter, qryRefSnps, mummerEnv).run();
-                    
-                    new MumSnpToVcfRunner(refQrySnps, vcf, ref, qrySampleName).run();
+                    new ShowSnpsRunner(qryRefFilter, qryRefSnps, true, mummerEnv).run();
+
+                    new MumSnpToVcf2(refQrySnps, qryRefSnps, vcf, seqDict, qrySampleName).run();
                     new CoordsCoverageRunner(refQryCoords, ref, cov).run();
                 }
             });
@@ -254,7 +259,7 @@ public class ISGPipeline extends CommandLineProgram {
             final String sampleName = getSampleName(bamFile);
             final File out = new File(isg.getCovDir(), sampleName + ".bed");
             final File summary = new File(isg.getCovDir(), sampleName + ".summary");
-            
+
             es.submit(new CallableLociRunner(bamFile, out, isg.getRef(), summary));
         }
         es.shutdown();
