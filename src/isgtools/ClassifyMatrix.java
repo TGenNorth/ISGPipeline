@@ -15,6 +15,7 @@ import net.sf.picard.cmdline.CommandLineProgram;
 import net.sf.picard.cmdline.Option;
 import net.sf.picard.cmdline.Usage;
 import org.broadinstitute.sting.utils.variantcontext.VariantContext;
+import org.nau.isg.matrix.VariantContextTabHeader;
 
 /**
  * Classifies SNPs of a ISG Matrix file.
@@ -40,7 +41,9 @@ public class ClassifyMatrix extends CommandLineProgram {
 
         final GenBankAnnotator annotator = new GenBankAnnotator(GBK_DIR, REF);
 
-        writer.writeHeader(reader.getHeader());
+        VariantContextTabHeader header = reader.getHeader();
+        header = annotator.annotate(header);
+        writer.writeHeader(header);
 
         VariantContext record = null;
         long count = 0;

@@ -14,10 +14,30 @@ import org.broadinstitute.sting.utils.variantcontext.Allele;
 import org.broadinstitute.sting.utils.variantcontext.VariantContext;
 import org.broadinstitute.sting.utils.variantcontext.VariantContextBuilder;
 
+import org.nau.isg.matrix.VariantContextTabHeader;
 import org.tgen.commons.genbank.GenBank;
 
 public class GenBankAnnotator {
 
+    enum GbkAttr {
+        locusTag,
+        product,
+        geneName,
+        GeneID,
+        GI,
+        geneStart,
+        geneEnd,
+        refCodon,
+        derivedCodon,
+        refAA,
+        derivedAA,
+        genePos,
+        geneStrand,
+        transTable,
+        codonStart,
+        snpType;
+    };
+    
     private Map<String, GenBank> gbks = new HashMap<String, GenBank>();
     private ReferenceSequenceFile refSeq;
 
@@ -31,6 +51,13 @@ public class GenBankAnnotator {
 
     private void addGenbank(GenBank gbk) {
         gbks.put(gbk.getName(), gbk);
+    }
+    
+    public VariantContextTabHeader annotate(VariantContextTabHeader header){
+        for(final GbkAttr attrName: GbkAttr.values()){
+            header = header.addAttribute(attrName.name());
+        }
+        return header;
     }
 
     public VariantContext annotate(VariantContext vc) {
@@ -69,15 +96,17 @@ public class GenBankAnnotator {
             final String product = getValue("product", gene);
             final String geneName = getValue("gene", gene);
             final String geneId = getAccession("GeneID", gene);
+            final String gi = getAccession("GI", gene);
             final int max = gene.getLocation().getMax();
             final int min = gene.getLocation().getMin();
 
-            attribs.put("locusTag", locusTag);
-            attribs.put("product", product);
-            attribs.put("geneName", geneName);
-            attribs.put("GeneID", geneId);
-            attribs.put("geneStart", min);
-            attribs.put("geneEnd", max);
+            attribs.put(GbkAttr.locusTag.name(), locusTag);
+            attribs.put(GbkAttr.product.name(), product);
+            attribs.put(GbkAttr.geneName.name(), geneName);
+            attribs.put(GbkAttr.GeneID.name(), geneId);
+            attribs.put(GbkAttr.GI.name(), gi);
+            attribs.put(GbkAttr.geneStart.name(), min);
+            attribs.put(GbkAttr.geneEnd.name(), max);
 
             if (qAllele == null) {
             } else if (gene.getType().equalsIgnoreCase("CDS")) {
@@ -104,33 +133,33 @@ public class GenBankAnnotator {
 
                 String derivedAA = derivedCodon.getAminoAcid(cds.getTranslationTable());
 
-                attribs.put("refCodon", refCodon.getDna());
-                attribs.put("derivedCodon", derivedCodon.getDna());
-                attribs.put("refAA", refAA);
-                attribs.put("derivedAA", derivedAA);
-                attribs.put("genePos", cds.convertRefToCDSPos(vc.getStart()));
-                attribs.put("geneStrand", cds.getStrand());
-                attribs.put("transTable", cds.getTranslationTable());
-                attribs.put("codonStart", cds.getCodonStart());
+                attribs.put(GbkAttr.refCodon.name(), refCodon.getDna());
+                attribs.put(GbkAttr.derivedCodon.name(), derivedCodon.getDna());
+                attribs.put(GbkAttr.refAA.name(), refAA);
+                attribs.put(GbkAttr.derivedAA.name(), derivedAA);
+                attribs.put(GbkAttr.genePos.name(), cds.convertRefToCDSPos(vc.getStart()));
+                attribs.put(GbkAttr.geneStrand.name(), cds.getStrand());
+                attribs.put(GbkAttr.transTable.name(), cds.getTranslationTable());
+                attribs.put(GbkAttr.codonStart.name(), cds.getCodonStart());
 
                 if (refAA.equals(derivedAA)) {
-                    attribs.put("snpType", "sSNP");
+                    attribs.put(GbkAttr.snpType.name(), "sSNP");
                 } else {
-                    attribs.put("snpType", "nSNP");
+                    attribs.put(GbkAttr.snpType.name(), "nSNP");
                 }
 
             } else if (gene.getType().equalsIgnoreCase("tRNA")) {
-                attribs.put("snpType", "tSNP");
+                attribs.put(GbkAttr.snpType.name(), "tSNP");
             } else if (gene.getType().equalsIgnoreCase("rRNA")) {
-                attribs.put("snpType", "rSNP");
+                attribs.put(GbkAttr.snpType.name(), "rSNP");
             } else if (gene.getType().equalsIgnoreCase("pseudo_gene")) {
-                attribs.put("snpType", "pSNP");
+                attribs.put(GbkAttr.snpType.name(), "pSNP");
             } else {
-                attribs.put("snpType", gene.getType() + "SNP");
+                attribs.put(GbkAttr.snpType.name(), gene.getType() + "SNP");
             }
 
         } else {
-            attribs.put("snpType", "iSNP");
+            attribs.put(GbkAttr.snpType.name(), "iSNP");
         }
 
         VariantContextBuilder vcBuilder = new VariantContextBuilder(vc);
