@@ -9,8 +9,6 @@ import org.nau.isg.matrix.ISGMatrixWriter;
 import org.nau.isg.matrix.ISGMatrixHeader;
 import org.nau.isg.matrix.ISGMatrixRecord;
 import org.nau.isg.tools.util.ISGMatrixRecordUtils;
-import org.nau.isg.tools.util.PatternBuilder;
-import org.nau.isg.tools.util.PatternNumGenerator;
 import org.nau.isg.tools.util.TabularTableCodec;
 import java.io.File;
 import java.io.IOException;
@@ -19,8 +17,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import net.sf.picard.cmdline.CommandLineProgram;
 import net.sf.picard.cmdline.Option;
 import net.sf.picard.cmdline.StandardOptionDefinitions;
@@ -33,14 +29,11 @@ import org.apache.commons.io.FileUtils;
 import org.broad.tribble.AbstractFeatureReader;
 import org.broad.tribble.CloseableTribbleIterator;
 import org.broadinstitute.sting.utils.GenomeLocParser;
+import org.broadinstitute.sting.utils.codecs.vcf.VCFCodec;
 import org.broadinstitute.sting.utils.variantcontext.VariantContext;
-import org.tgen.commons.feature.Locus;
 import org.tgen.commons.feature.TableFeature;
 import org.tgen.commons.gff.GffReader;
 import org.tgen.commons.gff.GffRecord;
-import org.tgen.commons.io.BedFileReader;
-import org.tgen.commons.io.TabularReader;
-import org.tgen.commons.vcf.VCFReader;
 /**
  *
  * @author jbeckstrom
@@ -246,11 +239,13 @@ public class AppendMatrix extends CommandLineProgram {
 
     private List<Interval> parseVCF(File file) throws Exception {
         List<Interval> ret = new ArrayList<Interval>();
-        VCFReader reader = new VCFReader(file);
-        VariantContext vc = null;
-        while ((vc = reader.next()) != null) {
+        AbstractFeatureReader<VariantContext> reader = AbstractFeatureReader.getFeatureReader(file.getAbsolutePath(), new VCFCodec(), false);
+        final CloseableTribbleIterator<VariantContext> iter = reader.iterator();
+        while (iter.hasNext()) {
+            final VariantContext vc = iter.next();
             ret.add(new Interval(vc.getChr(), vc.getStart(), vc.getEnd()));
         }
+        iter.close();
         return ret;
     }
 

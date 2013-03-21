@@ -9,8 +9,6 @@ import org.nau.isg.matrix.ISGMatrixWriter;
 import org.nau.isg.matrix.ISGMatrixRecord;
 import org.nau.isg.tools.util.TabularTableCodec;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.sf.picard.cmdline.CommandLineProgram;
@@ -24,10 +22,6 @@ import org.broad.tribble.AbstractFeatureReader;
 import org.broad.tribble.CloseableTribbleIterator;
 import org.broadinstitute.sting.utils.GenomeLocParser;
 import org.broadinstitute.sting.utils.codecs.table.TableFeature;
-import org.broadinstitute.sting.utils.variantcontext.VariantContext;
-import org.tgen.commons.gff.GffReader;
-import org.tgen.commons.gff.GffRecord;
-import org.tgen.commons.vcf.VCFReader;
 
 /**
  *
@@ -140,37 +134,6 @@ public class FilterMatrix extends CommandLineProgram {
     private void writeRecord(ISGMatrixRecord record, ISGMatrixWriter writer) {
         ISGMatrixRecord ret = new ISGMatrixRecord(record.getChrom(), record.getPos(), record.getRef(), record.getStates(), record.getAdditionalInfo());
         writer.addRecord(ret);
-    }
-
-    private List<Interval> parseGff(File file) throws Exception {
-        List<Interval> ret = new ArrayList<Interval>();
-        GffReader reader = new GffReader(file);
-        GffRecord record = null;
-        while ((record = reader.nextRecord()) != null) {
-            String chr = record.getAttribute("i");
-            int start = record.getStart();
-            int end = record.getEnd();
-            ret.add(new Interval(chr, start, end));
-        }
-        return ret;
-    }
-
-    private List<Interval> parseVCF(File file) throws Exception {
-        List<Interval> ret = new ArrayList<Interval>();
-        VCFReader reader = new VCFReader(file);
-        VariantContext vc = null;
-        while ((vc = reader.next()) != null) {
-            ret.add(new Interval(vc.getChr(), vc.getStart(), vc.getEnd()));
-        }
-        return ret;
-    }
-
-    private List<Object> createEmptyList(int size) {
-        List<Object> ret = new ArrayList<Object>();
-        for (int i = 0; i < size; i++) {
-            ret.add(null);
-        }
-        return ret;
     }
 
     public static void main(String[] args) {
