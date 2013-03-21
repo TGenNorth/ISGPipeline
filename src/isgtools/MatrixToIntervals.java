@@ -4,8 +4,8 @@
  */
 package isgtools;
 
-import isgtools.io.ISGMatrixReader;
-import isgtools.model.ISGMatrixRecord;
+import org.nau.isg.matrix.ISGMatrixReader;
+import org.nau.isg.matrix.ISGMatrixRecord;
 import java.io.File;
 import net.sf.picard.PicardException;
 import net.sf.picard.cmdline.CommandLineProgram;

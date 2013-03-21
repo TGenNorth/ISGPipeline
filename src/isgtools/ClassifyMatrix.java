@@ -4,8 +4,8 @@
  */
 package isgtools;
 
-import isgtools.io.VariantContextTabReader;
-import isgtools.io.VariantContextTabWriter;
+import org.nau.isg.matrix.VariantContextTabReader;
+import org.nau.isg.matrix.VariantContextTabWriter;
 import isgtools.snpclassifier.GenBankAnnotator;
 import java.io.File;
 import java.io.FileNotFoundException;

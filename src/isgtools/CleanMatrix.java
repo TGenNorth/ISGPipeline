@@ -4,9 +4,9 @@
  */
 package isgtools;
 
-import isgtools.io.ISGMatrixReader;
-import isgtools.io.ISGMatrixWriter;
-import isgtools.model.ISGMatrixRecord;
+import org.nau.isg.matrix.ISGMatrixReader;
+import org.nau.isg.matrix.ISGMatrixWriter;
+import org.nau.isg.matrix.ISGMatrixRecord;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;

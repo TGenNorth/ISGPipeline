@@ -4,11 +4,8 @@
  */
 package isgtools;
 
-import isgtools.io.ISGMatrixReader;
-import isgtools.io.ISGMatrixWriter;
-import isgtools.io.VariantContextTabReader;
-import isgtools.io.VariantContextTabWriter;
-import isgtools.model.ISGMatrixRecord;
+import org.nau.isg.matrix.VariantContextTabReader;
+import org.nau.isg.matrix.VariantContextTabWriter;
 import isgtools.util.SkimmingIterator;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -16,13 +13,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import net.sf.picard.PicardException;
 import net.sf.picard.cmdline.CommandLineProgram;
 import net.sf.picard.cmdline.Option;

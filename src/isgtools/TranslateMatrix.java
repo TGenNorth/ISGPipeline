@@ -4,49 +4,33 @@
  */
 package isgtools;
 
-import isgtools.io.ISGMatrixReader;
-import isgtools.io.ISGMatrixWriter;
-import isgtools.io.VariantContextTabHeader;
-import isgtools.io.VariantContextTabReader;
-import isgtools.io.VariantContextTabWriter;
-import isgtools.model.ISGMatrixRecord;
-import isgtools.util.SkimmingIterator;
+import org.nau.isg.matrix.VariantContextTabHeader;
+import org.nau.isg.matrix.VariantContextTabReader;
+import org.nau.isg.matrix.VariantContextTabWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import net.sf.picard.PicardException;
 import net.sf.picard.cmdline.CommandLineProgram;
 import net.sf.picard.cmdline.Option;
 import net.sf.picard.cmdline.Usage;
-import net.sf.picard.reference.ReferenceSequence;
 import net.sf.picard.reference.ReferenceSequenceFile;
-import net.sf.picard.reference.ReferenceSequenceFileFactory;
 import net.sf.picard.util.Interval;
 import net.sf.picard.util.OverlapDetector;
-import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.util.SequenceUtil;
 import org.broadinstitute.sting.utils.variantcontext.Allele;
 import org.broadinstitute.sting.utils.variantcontext.Genotype;
 import org.broadinstitute.sting.utils.variantcontext.GenotypeBuilder;
 import org.broadinstitute.sting.utils.variantcontext.VariantContext;
 import org.broadinstitute.sting.utils.variantcontext.VariantContextBuilder;
-import org.tgen.commons.coords.CoordsRecord;
-import org.tgen.commons.feature.Coord;
 import org.tgen.commons.mummer.delta.DeltaAlignment;
 import org.tgen.commons.mummer.delta.DeltaFileReader;
-import org.tgen.commons.utils.CoordsUtils;
 
 /**
  * Translates a matrix from one reference to another.

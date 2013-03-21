@@ -4,9 +4,9 @@
  */
 package isgtools;
 
-import isgtools.io.ISGMatrixReader;
-import isgtools.io.ISGMatrixWriter;
-import isgtools.model.ISGMatrixRecord;
+import org.nau.isg.matrix.ISGMatrixReader;
+import org.nau.isg.matrix.ISGMatrixWriter;
+import org.nau.isg.matrix.ISGMatrixRecord;
 import isgtools.util.TabularTableCodec;
 import java.io.File;
 import java.util.ArrayList;

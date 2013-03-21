@@ -6,12 +6,9 @@ package org.nau.isgpipeline;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -27,13 +24,10 @@ import net.sf.samtools.SAMFileHeader;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMReadGroupRecord;
 import net.sf.samtools.SAMSequenceDictionary;
-import org.broad.tribble.bed.BEDCodec;
-import org.broadinstitute.sting.utils.codecs.vcf.VCFHeader;
 import org.nau.bwa.BWAPipeline;
 import org.nau.bwa.IndexRunner;
 import org.nau.bwamatch.SequenceFilePair;
 import org.nau.bwamatch.SequenceFilePairMatcher;
-import org.nau.coverage.bam.FindCoverageRunner;
 import org.nau.coverage.coords.CoordsCoverageRunner;
 import org.nau.finddups.FindDupsRunner;
 import org.nau.gatk.CallableLociRunner;
@@ -41,7 +35,6 @@ import org.nau.isg.tools.FindParalogsRunner;
 import org.nau.isg2.ISG2;
 import org.nau.mummer.DeltaFilterRunner;
 import org.nau.mummer.MumSnpToVcf2;
-import org.nau.mummer.MumSnpToVcfRunner;
 import org.nau.mummer.MummerEnv;
 import org.nau.mummer.NucmerRunner;
 import org.nau.mummer.ShowSnpsRunner;
@@ -49,8 +42,6 @@ import org.nau.util.FileUtils;
 import org.tgen.commons.gatk.UnifiedGenotyperRunner;
 import org.tgen.commons.gatk.UnifiedGenotyperRunner.OutMode;
 import org.tgen.commons.reference.CreateFastaIndex;
-import org.tgen.commons.utils.VariantContextMergingIterator;
-import org.tgen.commons.vcf.VCFReader;
 
 /**
  *

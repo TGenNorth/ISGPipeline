@@ -4,7 +4,7 @@
  */
 package isgtools.util;
 
-import isgtools.model.ISGMatrixHeader;
+import org.nau.isg.matrix.ISGMatrixHeader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;

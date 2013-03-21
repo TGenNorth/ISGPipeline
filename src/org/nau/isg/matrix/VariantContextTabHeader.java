@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package isgtools.io;
+package org.nau.isg.matrix;
 
 import java.util.ArrayList;
 import java.util.Collection;

@@ -4,22 +4,14 @@
  */
 package isgtools;
 
-import isgtools.io.ISGMatrixReader;
-import isgtools.io.ISGMatrixWriter;
-import isgtools.io.VariantContextTabHeader;
-import isgtools.io.VariantContextTabReader;
-import isgtools.io.VariantContextTabWriter;
-import isgtools.model.ISGMatrixHeader;
-import isgtools.model.ISGMatrixRecord;
-import isgtools.util.ISGMatrixRecordUtils;
+import org.nau.isg.matrix.VariantContextTabHeader;
+import org.nau.isg.matrix.VariantContextTabReader;
+import org.nau.isg.matrix.VariantContextTabWriter;
+import org.nau.isg.matrix.ISGMatrixHeader;
 import isgtools.util.PatternBuilder;
 import isgtools.util.PatternNumGenerator;
 import java.io.File;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import net.sf.picard.PicardException;
 import net.sf.picard.cmdline.CommandLineProgram;
 import net.sf.picard.cmdline.Option;

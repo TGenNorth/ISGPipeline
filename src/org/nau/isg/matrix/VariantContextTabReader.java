@@ -2,10 +2,8 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package isgtools.io;
+package org.nau.isg.matrix;
 
-import isgtools.model.ISGMatrixHeader;
-import isgtools.model.ISGMatrixRecord;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
