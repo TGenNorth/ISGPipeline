@@ -1,15 +1,9 @@
 package org.nau.picard;
 
-import org.nau.bwa.*;
-import org.nau.mummer.*;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import net.sf.picard.sam.AddOrReplaceReadGroups;
 import net.sf.picard.sam.MarkDuplicates;
-import org.nau.util.ExternalProcess;
-import org.tgen.commons.utils.CommandFactory;
 
 public class MarkDuplicatesRunner implements Runnable {
 

@@ -4,8 +4,8 @@
  */
 package org.nau.isg.matrix;
 
-import isgtools.util.PatternBuilder;
-import isgtools.util.PatternNumGenerator;
+import org.nau.isg.tools.util.PatternBuilder;
+import org.nau.isg.tools.util.PatternNumGenerator;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;

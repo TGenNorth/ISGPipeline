@@ -2,10 +2,8 @@ package org.nau.mummer;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import org.nau.util.ExternalProcess;
-import org.tgen.commons.utils.CommandFactory;
 
 public class NucmerRunner implements Runnable {
 

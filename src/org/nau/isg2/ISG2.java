@@ -4,7 +4,7 @@
  */
 package org.nau.isg2;
 
-import isgtools.snpclassifier.GenBankAnnotator;
+import org.nau.isg.tools.snpclassifier.GenBankAnnotator;
 import org.broadinstitute.sting.gatk.walkers.coverage.CallableLoci.CalledState;
 import org.nau.isg2.util.Filter;
 import org.nau.isg2.util.SkimmingIterator;
