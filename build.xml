@@ -11,6 +11,41 @@
     <description>Builds, tests, and runs the project ISGPipeline.</description>
     <import file="nbproject/build-impl.xml"/>
     
+    <target name="-post-jar">
+        <package-jar title="DetermineStatus"         main-class="org.nau.isg.tools.DetermineStatus"/>
+        <package-jar title="AppendMatrix"           main-class="org.nau.isg.tools.AppendMatrix"/>
+        <package-jar title="CalculateStatistics"    main-class="org.nau.isg.tools.CalculateStatistics"/>
+        <package-jar title="CalculateMismatch"      main-class="org.nau.isg.tools.CalculateMismatch"/>
+        <package-jar title="CleanMatrix"            main-class="org.nau.isg.tools.CleanMatrix"/>
+        <package-jar title="FilterMatrix"           main-class="org.nau.isg.tools.FilterMatrix"/>
+        <package-jar title="FixHeaders"             main-class="org.nau.isg.tools.FixHeaders"/>
+        <package-jar title="ISGToolsBatchRunner"    main-class="org.nau.isg.tools.org.nau.isg.toolsBatchRunner"/>
+        <package-jar title="MatrixToIntervals"      main-class="org.nau.isg.tools.MatrixToIntervals"/>
+        <package-jar title="RemoveGenomes"          main-class="org.nau.isg.tools.RemoveGenomes"/>
+        <package-jar title="FormatForTree"          main-class="org.nau.isg.tools.FormatForTree"/>
+        <package-jar title="TranslateMatrix"          main-class="org.nau.isg.tools.TranslateMatrix"/>
+        <package-jar title="ClassifyMatrix"          main-class="org.nau.isg.tools.ClassifyMatrix"/>
+        <package-jar title="CalculatePattern"          main-class="org.nau.isg.tools.CalculatePattern"/>
+        <package-jar title="CompareMatrix"          main-class="org.nau.isg.tools.CompareMatrix"/>
+    </target>
+    
+    <!-- Create a jar for a command-line class so it can be run java -jar jarfile -->
+    <macrodef name="package-jar">
+        <attribute name="main-class"/>
+        <attribute name="title"/>
+        <sequential>
+            <jar destfile="${dist.dir}/@{title}.jar">
+                <fileset dir="${build.classes.dir}" includes="**/*"/>
+<!--                <zipgroupfileset dir="${lib}" includes="*.jar"/>-->
+                <manifest>
+                    <attribute name="Implementation-Title" value="@{title}"/>
+                    <attribute name="Main-Class" value="@{main-class}"/>
+                    <attribute name="Class-Path" value="${jar.classpath}"/>
+                </manifest>
+            </jar>
+        </sequential>
+    </macrodef>
+    
     <target name="package-for-store" depends="jar">
 
         

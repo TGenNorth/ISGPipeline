@@ -4,16 +4,10 @@
  */
 package org.nau.isgpipeline;
 
-import org.tgen.commons.samtools.*;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.Collection;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.apache.commons.io.FileUtils;
 
 /**
