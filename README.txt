@@ -37,11 +37,14 @@ fastas, an locus will be considered covered if it aligns to the reference using 
 To run the project from the command line, go to the dist folder and
 type the following:
 
-java -jar "ISGPipeline.jar" 
+java -jar ISGPipeline.jar -S ISGPipelineQScript.scala
+
+After running the above command you will get an error message with a listing of 
+optional/required arguments to use.
 
 Steps to run an analysis:
 
-1. To initialize a project run ISGPipeline using only the ISG argument. Use a meaningful name that describes your analysis.
+1. To initialize a project, create an empty directory and run ISGPipeline using only the ISG argument. Use a meaningful name that describes your analysis.
 
 ex. java -jar ISGPipeline.jar ISG=analysis1. 
 

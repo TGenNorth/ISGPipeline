@@ -31,10 +31,10 @@ class ISGPipelineQScript extends QScript {
   @Argument(doc="gatkJarFile", shortName="gatk")
   var gatkJarFile: File = null
   
-  @Argument(doc="path to bwa.", shortName="bwa")
+  @Argument(doc="path to bwa.", shortName="bwa", required=false)
   var pathToBWA: String = null
   
-  @Argument(doc="path to mummer.", shortName="mummer")
+  @Argument(doc="path to mummer.", shortName="mummer", required=false)
   var pathToMummer: String = null
   
   @Argument(doc="Do not fail when encountering base qualities that are too high "+
@@ -75,6 +75,9 @@ class ISGPipelineQScript extends QScript {
   var dupsDir: File = _
   
   def init() {
+    if(!isgRoot.exists){
+      isgRoot.mkdirs
+    }
     referenceFile = new File(isgRoot, "ref.fasta")
     fastaDir = mkdir(new File(isgRoot, "fastas"))
     mummerDir = mkdir(new File(isgRoot, "mummer"))
