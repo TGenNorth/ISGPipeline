@@ -204,9 +204,9 @@ class ISGPipelineQScript extends QScript {
       val rgBam = new File(bamsDir, sample + ".rg.bam")
       val uniqueBam = new File(bamsDir, sample + ".bam")
       
-      add(new BWAAln(prefix, fastq1, sai1, false))
+      add(new BWAAln(prefix, fastq1, sai1))
       if(fastq2!=null){ //paired-end
-        add(new BWAAln(prefix, fastq2, sai2, false))
+        add(new BWAAln(prefix, fastq2, sai2))
         add(new BWASampe(prefix, sai1, sai2, fastq1, fastq2, sam))
       }else{ //single-end
         add(new BWASamse(prefix, sai1, fastq1, sam))
@@ -302,6 +302,7 @@ class ISGPipelineQScript extends QScript {
     this.RGLB = LB
     this.RGPU = PU
     this.RGPL = PL
+    this.createIndex = false
     this.isIntermediate = intermediate
   }
   
