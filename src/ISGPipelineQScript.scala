@@ -103,6 +103,11 @@ class ISGPipelineQScript extends QScript {
     for(fasta : File <- fastaDir.listFiles){
       if(fasta.getName.endsWith(".fasta")) addFasta(fasta)
     }
+    
+    val matrix = new File(outDir, ".isg_out.tab.done")
+    if(matrix.exists){
+      matrix.delete
+    }
   }
   
   def mkdir(dir: File): File ={
@@ -124,9 +129,7 @@ class ISGPipelineQScript extends QScript {
     callSnpsAndCalculateCoverage
     
     val matrix = new File(outDir, "isg_out.tab")
-    val isg = new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile, matrix)
-    isg.deleteOutputs
-    add(isg)
+    add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile, matrix))
     
   }
   
