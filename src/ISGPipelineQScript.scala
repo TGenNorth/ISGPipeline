@@ -23,7 +23,7 @@ import mummer.coords.CoordsDupsInProcessFunction
 import mummer.snps.MumSnpToVcf
 import org.apache.commons.io.FileUtils
 
-class MyQScript extends QScript {
+class ISGPipelineQScript extends QScript {
 
   @Input(doc="The directory to output.", shortName="isg")
   var isgRoot: File = null
