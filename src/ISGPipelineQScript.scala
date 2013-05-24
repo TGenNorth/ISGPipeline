@@ -75,7 +75,7 @@ class ISGPipelineQScript extends QScript {
   var dupsDir: File = _
   
   def init() {
-    referenceFile = mkdir(new File(isgRoot, "ref.fasta"))
+    referenceFile = new File(isgRoot, "ref.fasta")
     fastaDir = mkdir(new File(isgRoot, "fastas"))
     mummerDir = mkdir(new File(isgRoot, "mummer"))
     readsDir = mkdir(new File(isgRoot, "reads"))
