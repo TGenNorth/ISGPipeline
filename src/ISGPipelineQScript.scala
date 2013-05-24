@@ -34,7 +34,7 @@ class ISGPipelineQScript extends QScript {
   @Argument(doc="path to bwa.", shortName="bwa", required=false)
   var pathToBWA: String = null
   
-  @Argument(doc="path to mummer.", shortName="mummer", required=false)
+  @Argument(doc="path to mummer.", shortName="mummer")
   var pathToMummer: String = null
   
   @Argument(doc="Do not fail when encountering base qualities that are too high "+

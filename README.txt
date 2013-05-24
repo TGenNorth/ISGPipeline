@@ -3,7 +3,7 @@
 --------------------------------------------------------------------------------
 
 ISGPipeline is a java program that combines SNPs into a matrix for genotyping. 
-Functionality includes snp calling using solsnp and/or mummer, identification of 
+Functionality includes snp calling using gatk and/or mummer, identification of 
 ambiguous SNPs, identification of regions of no coverage using samtools and 
 mummer, and annotation of SNPs using genbank.
 
@@ -15,12 +15,9 @@ results of ISGPipeline. To find out more read the README in the isgtools directo
 --------------------------------------------------------------------------------
 
 SNP calling -
-ISGPipeline uses several different methods for calling SNPs. SNP calling on input
-bam files will be done using GATK or SolSNP. If GATK is specified, then ISGPipeline 
-will run the UnifiedGenotyper on each bam file. 
+ISGPipeline will run the UnifiedGenotyper on each bam file. 
 //TODO Explain how UnifiedGenotyper is run
-If GATK is not specified, then SolSNP will be run.
-//TODO explain SolSNP 
+
 SNP calling on input sequence files will be done using MUMmer.
 
 coverage
@@ -44,73 +41,40 @@ optional/required arguments to use.
 
 Steps to run an analysis:
 
-1. To initialize a project, create an empty directory and run ISGPipeline using only the ISG argument. Use a meaningful name that describes your analysis.
+1. To initialize a project, create an empty directory and run ISGPipeline using 
+the required arguments.
 
-ex. java -jar ISGPipeline.jar ISG=analysis1. 
+ex. java -jar ISGPipeline.jar -S ISGPipelineQScript.scala \
+-isg analysis1 \
+-bwa /path/to/bwa \
+-mummer /path/to/mummer \
+-gatk /path/to/gatkjar
+-run
 
-This will create an "analysis1" directory in your working directory. Inside the "analysis1" directory you will see several empty directories.
- 
+This will create an "analysis1" directory in your working directory. Inside the 
+"analysis1" directory you will see several empty directories.
+
+
 2. Copy the reference fasta file to the "analysis1" directory. This file must be named: "ref.fasta".
+- If you have sequence files (ie fastqs), put them in the "analysis1/reads" directory.
+- If you have bams, put them and their index files (bai) you want analyzed in the "analysis1/bams" directory. 
+- If you have fastas, put them in the "analysis1/fastas" directory.
 
-3. Put the bams and their index files (bai) you want analyzed in the "analysis1/bams" directory. 
+6. Run ISGPipeline again. 
 
-4. Put the public genomes you want analyzed in the "analysis1/fastas" directory.
+ex. java -jar ISGPipeline.jar -S ISGPipelineQScript.scala \
+-isg analysis1 \
+-bwa /path/to/bwa \
+-mummer /path/to/mummer \
+-gatk /path/to/gatkjar
+-run
 
-5. If you have any genbank files cooresponding to your reference place them in the "analysis1/genbank" directory. There must be a genbank file for each chromosome in the reference. 
+The ISG argument must be the path to the directory created in step 1. 
+The MUMMER argument must be the path to the root directory where Mummer is installed.
 
-6. Run ISGPipeline again, but this time specifiy any additional arguments. The only required arguments are ISG and MUMMER. 
+7. When ISGPipeline is finished there will be a file called "isg_out.tab" in the 
+"analysis1/out" directory. This file is a matrix of ALL SNPs found by the pipeline. 
 
-ex. java -jar ISGPipeline.jar ISG=analysis1 MUMMER=path/to/mummer
-
-The ISG argument must be the path to the directory created in step 1. The MUMMER argument must be the path to the root directory where Mummer is installed.
-
-7. When ISGPipeline is finished there will be a file called "isg_out.tab" in the "analysis1/out" directory. This file is a matrix of ALL SNPs found by the pipeline. 
-
-Please Note:
-ISGPipeline runs several external programs which can take a while to run. Solsnp 
-takes the longest, as it is being run in AllCallable mode. I do this so that I 
-can get the calls at each position of the genome which is why I set 
-MINIMUM_COVERAGE=0. After Solsnp completes, the ambiguous calls and 
-snp calls are filtered and placed into the directories vcf/ambiguous and vcf/snps 
-respectively. Then, ISGPipeline merges the snps using vcftools. Once this 
-completes, ISG is run on the merged vcf file and looks for positions where no 
-snp was called. If the position is covered and was not called ambiguous it gets 
-the reference state. If the position is covered but is ambiguous it gets called 
-'N'. These results are written to out/isg_out.tab.
-
-Command-line options
-
-ISG : 
-path to the root directory containing all the files required by the analysis.
-
-MUMMER: 
-Path to MUMmer.
-
-GATK: 
-Path to GenomeAnalysisTK.jar (version 2.1 or later)
-
-SOLSNP_OPTIONS_FILE
-Path to SolSNP options file. To get a list of all available options run SolSNP without any arguments.
-
-MIN_COVERAGE
-Minimum amount of reads to be considered covered. Default value is 3.
-
-MIN_SNP_COVERAGE
-Minimum amount of reads to call a snp. If a SNP is called by solSNP, but the coverage is below MIN_SNP_COVERAGE than that SNP will be considered ambiguous and will be called 'N' in the output matrix file. Default value is 3.
-
-MIN_QUAL
-Minimum genotype quality to be considered a snp. If a SNP is called by solSNP, but the genotype quality is below MIN_QAUL than that SNP will be considered ambiguous and will be called 'N' in the output matrix file. Default value is 4.
-
-FILTER
-Solsnp's minimum confidence score allowed for calls. Default value is .85
-
-NUM_THREADS
-Number of threads to run.
-
-overwrite
-Overwrite existing files
-
-confusion between MIN_COVERAGE and MIN_SNP_COVERAGE.
 
 --------------------------------------------------------------------------------
 --DIRECTORY STRUCTURE--
@@ -126,13 +90,9 @@ ROOT --> |---mummer
          |
          |---fastas
          |
-         |---genBank
-         |
          |---out
          |
-         |---vcf-->|---snps
-         |         |
-         |         |---ambiguous
+         |---vcf
          |
          |---ref.fasta
 
@@ -177,4 +137,5 @@ be installed on the machine where ISGPipeline is run. You can specify the path
 to each dependency using the options from the command line.
 
 -MUMmer 3+ (http://sourceforge.net/projects/mummer/)
--GATK (optional)
+-GATK
+-BWA (optional)
