@@ -124,7 +124,9 @@ class ISGPipelineQScript extends QScript {
     callSnpsAndCalculateCoverage
     
     val matrix = new File(outDir, "isg_out.tab")
-    add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile, matrix))
+    val isg = new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile, matrix)
+    isg.deleteOutputs
+    add(isg)
     
   }
   
