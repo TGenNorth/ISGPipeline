@@ -11,6 +11,10 @@
     <description>Builds, tests, and runs the project ISGPipeline.</description>
     <import file="nbproject/build-impl.xml"/>
     
+    <target name="-post-jar">
+        <copy file="src/ISGPipelineQScript.scala" todir="dist/"/>
+    </target>
+    
     <target name="package-for-store" depends="jar">
 
         
