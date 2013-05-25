@@ -29,7 +29,7 @@ import static isg.VariantContextTestUtils.*;
  *
  * @author jbeckstrom
  */
-public class CallAmbiguousTest {
+public class MarkAmbiguousTest {
     
     private final MarkAmbiguousInfo info = new MarkAmbiguousInfo.Builder()
                 .maxNumAlt(1)
@@ -39,7 +39,7 @@ public class CallAmbiguousTest {
                 .minQual(17)
                 .build();
     
-    public CallAmbiguousTest() {
+    public MarkAmbiguousTest() {
     }
 
     @BeforeClass

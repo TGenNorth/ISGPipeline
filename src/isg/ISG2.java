@@ -63,10 +63,19 @@ public class ISG2 extends CommandLineProgram {
     public int MIN_GQ = 4;
     @Option(doc = "The minimum depth of reads needed to call a SNP.", optional = false)
     public int MIN_DP = 3;
+    @Option(doc = "Process indels.", optional = false)
+    public boolean INDEL = false;
     private SAMSequenceDictionary dict;
     private static final String AMBIGUOUS_CALL_STRING = "N";
     private static final Allele AMBIGUOUS_CALL = Allele.create(AMBIGUOUS_CALL_STRING);
     private static final Filter<VariantContext> SNP_INDEL_FILTER = new Filter<VariantContext>() {
+
+        @Override
+        public boolean pass(VariantContext t) {
+            return t.isSNP() || t.isIndel();
+        }
+    };
+    private static final Filter<VariantContext> SNP_FILTER = new Filter<VariantContext>() {
 
         @Override
         public boolean pass(VariantContext t) {
@@ -88,13 +97,6 @@ public class ISG2 extends CommandLineProgram {
 
     public static void main(String[] args) {
         System.exit(new ISG2().instanceMain(args));
-//        ISG2 isg2 = new ISG2();
-//        isg2.COV_DIR = new File("/Users/jbeckstrom/isgpipeline/bed");
-//        isg2.VCF_DIR = new File("/Users/jbeckstrom/isgpipeline/vcf");
-//        isg2.SAMPLE = Arrays.asList("Aceris", "859");
-//        isg2.REF = new File("/Users/jbeckstrom/isgpipeline/pseudomonas/ref.fasta");
-//        isg2.OUTPUT = new File("/Users/jbeckstrom/isgpipeline/test.out");
-//        isg2.doWork();
     }
 
     @Override
@@ -117,7 +119,7 @@ public class ISG2 extends CommandLineProgram {
     }
 
     private List<Iterator<VariantContext>> filterSNPs(List<Iterator<VariantContext>> iters) {
-        return applyFilter(iters, SNP_INDEL_FILTER);
+        return applyFilter(iters, INDEL ? SNP_INDEL_FILTER : SNP_FILTER);
     }
 
     private List<Iterator<VariantContext>> markAmbiguous(List<Iterator<VariantContext>> iters) {
@@ -186,7 +188,7 @@ public class ISG2 extends CommandLineProgram {
         }
         return ret;
     }
-
+    
     private MarkAmbiguousInfo createMarkAmbiguousInfo() {
         return new MarkAmbiguousInfo.Builder().maxNumAlt(1).minAF(MIN_AF).minDP(MIN_DP).minGQ(MIN_GQ).minQual(MIN_QUAL).build();
     }

@@ -33,9 +33,6 @@ public class SingleSampleGenotyperImpl implements SingleSampleGenotyper{
 
     @Override
     public Genotype genotype(Allele ref, String chr, int pos) {
-        if(ref.length()>1){
-            throw new IllegalArgumentException("cannot genotype a locus length > 1 : "+ref.length());
-        }
         if(ref.isNonReference()){
             throw new IllegalArgumentException("ref Allele must be flagged as reference.");
         }

@@ -24,8 +24,8 @@ import org.broadinstitute.variant.variantcontext.VariantContextBuilder;
 /**
  * "Fixes" the ploidy by reducing the number of alleles in each Genotype object
  * of a VariantContext to that of the specified ploidy. This is necessary because
- * the ploidy used by UG is set artificially high in order to pick up "ambiguous"
- * SNP calls that would be assumed the reference if the ploidy was set correctly.
+ * the ploidy used by UG is set artificially high in order to genotype "ambiguous"
+ * variants that would be assumed the reference if the ploidy was set correctly.
  * 
  * @author jbeckstrom
  */
@@ -37,11 +37,11 @@ public class FixPloidy implements Algorithm<VariantContext, VariantContext> {
         this.targetPloidy = aPloidy;
     }
 
-    @Override
     /*
      * This function has the side-effect of stripping out all attributes of the 
      * VariantContext and Genotypes therin. 
      */
+    @Override
     public VariantContext apply(VariantContext vc) {
         if(vc.getGenotype(0).getPloidy()==targetPloidy){
             return vc;

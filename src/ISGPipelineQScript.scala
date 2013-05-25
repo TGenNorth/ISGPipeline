@@ -42,6 +42,9 @@ class ISGPipelineQScript extends QScript {
             "of the BAM file", required=false)
   var allowPotentiallyMisencodedQuals: Boolean = false
   
+  @Argument(doc="Include indels in final output.", required=false)
+  var includeIndels: Boolean = false
+  
   val PATTERNS: java.util.List[SequenceFilePairPattern] = 
     Arrays.asList(new SequenceFilePairPattern("(.*)_[0-9]+_([0-9])_sequence\\..*"),
                 new SequenceFilePairPattern("(.*)_[ATCG]+_L[0-9]+_R([0-9])_[0-9]+\\..*"),
@@ -400,8 +403,8 @@ class ISGPipelineQScript extends QScript {
       required("REF="+ref) +
       required("VCF_DIR="+vcfDir) +
       required("COV_DIR="+covDir) +
-      required("GBK_DIR="+gbkDir)
-        
+      required("GBK_DIR="+gbkDir) +
+      optional("INDEL="+includeIndels)
   }
   
 }

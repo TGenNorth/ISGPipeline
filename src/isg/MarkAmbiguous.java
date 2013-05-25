@@ -35,11 +35,7 @@ public class MarkAmbiguous implements Algorithm<VariantContext, VariantContext> 
     
     @Override
     public VariantContext apply(VariantContext vc) {
-        if (!vc.isSNP()) {
-            throw new IllegalArgumentException("not a snp");
-        }
         if (VariantContextUtils.countUniqueAlleles(vc.getGenotype(0)) > info.maxNumAlt
-                || vc.getAlternateAllele(0).basesMatch("N")
                 || (vc.hasLog10PError() && vc.getPhredScaledQual() < info.minQual)
                 || (vc.getGenotype(0).hasGQ() && vc.getGenotype(0).getGQ() < info.minGQ)
                 || (vc.hasAttribute(VCFConstants.DEPTH_KEY) && vc.getAttributeAsInt(VCFConstants.DEPTH_KEY, -1) < info.minDP)
