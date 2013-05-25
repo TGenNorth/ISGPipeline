@@ -74,9 +74,6 @@ public class GenotypeNoCalls implements Algorithm<VariantContext, VariantContext
     }
 
     public Genotype genotype(final String sample, final VariantContext vc) {
-        if(!vc.isPointEvent()){
-            throw new IllegalArgumentException("VariantContext is not a point event: "+vc);
-        }
         if(!genotypers.containsKey(sample)){
             throw new IllegalArgumentException("Could not find LociStateCaller for sample: "+sample);
         }
