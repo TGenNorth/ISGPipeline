@@ -124,6 +124,28 @@ public class UnifiedGenotyperCommandLineFunctionTest {
         assertArrayEquals(expResult.trim().split("\\s+"), result.trim().split("\\s+"));
     }
     
+    @Test
+    public void testCommandLineContamination() {
+        System.out.println("commandLineContamination");
+        UnifiedGenotyperCommandLineFunction instance = createStandardInstance();
+        instance.contamination = 0.05;
+        String expResult = createStandardResult() + 
+                "  '-contamination' '0.05'";
+        String result = instance.commandLine();
+        assertArrayEquals(expResult.trim().split("\\s+"), result.trim().split("\\s+"));
+    }
+    
+    @Test
+    public void testCommandLineHeterozygosity() {
+        System.out.println("commandLineHeterozygosity");
+        UnifiedGenotyperCommandLineFunction instance = createStandardInstance();
+        instance.heterozygosity = 0.05;
+        String expResult = createStandardResult() + 
+                "  '--heterozygosity' '0.05'";
+        String result = instance.commandLine();
+        assertArrayEquals(expResult.trim().split("\\s+"), result.trim().split("\\s+"));
+    }
+    
     private UnifiedGenotyperCommandLineFunction createStandardInstance(){
         UnifiedGenotyperCommandLineFunction instance = new UnifiedGenotyperCommandLineFunction();
         instance.jarFile = new File("GATK.jar");
