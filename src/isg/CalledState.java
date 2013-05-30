@@ -8,6 +8,12 @@ package isg;
  *
  * @author jbeckstrom
  */
-public interface LociStateCaller {
-    public CalledState call(String chr, int pos);
+public enum CalledState {
+    REF_N,
+    PASS,
+    CALLABLE,
+    NO_COVERAGE,
+    LOW_COVERAGE,
+    EXCESSIVE_COVERAGE,
+    POOR_MAPPING_QUALITY;
 }

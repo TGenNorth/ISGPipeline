@@ -5,7 +5,6 @@
 package isg;
 
 import java.util.Arrays;
-import org.broadinstitute.sting.gatk.walkers.coverage.CallableLoci.CalledState;
 import org.broadinstitute.variant.variantcontext.Allele;
 import org.broadinstitute.variant.variantcontext.Genotype;
 import org.broadinstitute.variant.variantcontext.GenotypeBuilder;
@@ -42,6 +41,7 @@ public class SingleSampleGenotyperImpl implements SingleSampleGenotyper{
                 if(!ref.basesMatch("N")){
                     throw new IllegalStateException("Expected a REF_N but found: "+ref);
                 }
+            case PASS:
             case CALLABLE:
                 return new GenotypeBuilder(sample, Arrays.asList(ref)).make();
             case NO_COVERAGE:

@@ -6,7 +6,6 @@ package isg;
 
 import org.broadinstitute.variant.variantcontext.GenotypeBuilder;
 import java.util.Arrays;
-import org.broadinstitute.sting.gatk.walkers.coverage.CallableLoci.CalledState;
 import org.broadinstitute.variant.variantcontext.Allele;
 import org.broadinstitute.variant.variantcontext.Genotype;
 import org.junit.After;
@@ -101,6 +100,22 @@ public class SingleSampleGenotyperImplTest {
     }
     
     /**
+     * Test of genotype method, of class SingleSampleGenotyperImpl where locus is callable.
+     */
+    @Test
+    public void testGenotypePass() {
+        System.out.println("GenotypePass");
+        Allele ref = Allele.create("A", true);
+        String chr = "s1";
+        int pos = 0;
+        SingleSampleGenotyperImpl instance = new SingleSampleGenotyperImpl("s1", 
+                createLociStateCaller(CalledState.PASS));
+        Genotype expResult = new GenotypeBuilder("s1", Arrays.asList(ref)).make();
+        Genotype result = instance.genotype(ref, chr, pos);
+        assertTrue(expResult.sameGenotype(result));
+    }
+    
+    /**
      * Test of genotype method, of class SingleSampleGenotyperImpl where locus has low coverage.
      */
     @Test
@@ -121,7 +136,7 @@ public class SingleSampleGenotyperImplTest {
      */
     @Test
     public void testGenotypeExcessiveCoverage() {
-        System.out.println("GenotypeLowCoverage");
+        System.out.println("GenotypeExcessiveCoverage");
         Allele ref = Allele.create("A", true);
         String chr = "s1";
         int pos = 0;
@@ -137,7 +152,7 @@ public class SingleSampleGenotyperImplTest {
      */
     @Test
     public void testGenotypePoorMappingQuality() {
-        System.out.println("GenotypeLowCoverage");
+        System.out.println("GenotypePoorMappingQuality");
         Allele ref = Allele.create("A", true);
         String chr = "s1";
         int pos = 0;

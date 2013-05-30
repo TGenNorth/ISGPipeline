@@ -7,7 +7,6 @@ package isg;
 import java.util.Collection;
 import net.sf.picard.util.Interval;
 import net.sf.picard.util.OverlapDetector;
-import org.broadinstitute.sting.gatk.walkers.coverage.CallableLoci.CalledState;
 
 /**
  *

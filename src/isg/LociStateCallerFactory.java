@@ -13,7 +13,6 @@ import org.broad.tribble.AbstractFeatureReader;
 import org.broad.tribble.CloseableTribbleIterator;
 import org.broad.tribble.bed.BEDCodec;
 import org.broad.tribble.bed.BEDFeature;
-import org.broadinstitute.sting.gatk.walkers.coverage.CallableLoci.CalledState;
 
 /**
  *
