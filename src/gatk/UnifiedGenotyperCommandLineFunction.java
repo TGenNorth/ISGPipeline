@@ -5,14 +5,21 @@
 package gatk;
 
 import java.io.File;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.broadinstitute.sting.commandline.Argument;
 import org.broadinstitute.sting.commandline.Output;
+import util.TypedProperties;
 /**
  *
  * @author jbeckstrom
  */
 public class UnifiedGenotyperCommandLineFunction extends GATKCommandLineFunction {
-
+ 
+    public static final String COMMAND_PREFIX = "ug.";
+    
     public enum OutMode {
         EMIT_VARIANTS_ONLY,
         EMIT_ALL_CONFIDENT_SITES,

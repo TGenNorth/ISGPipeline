@@ -14,14 +14,17 @@ import isg.util.SequenceFilePair
 import isg.util.SequenceFilePairMatcher
 import isg.util.SequenceFilePairPattern
 import java.util.Arrays
+import java.util.Properties
 import mummer._
 import mummer.coords.CoordsCoverageInProcessFunction
 import gatk._
 import gatk.UnifiedGenotyperCommandLineFunction.GenotypeLikelihoodsModel
+import org.broadinstitute.sting.queue.function.QFunction
 import scala.collection.JavaConversions._
 import mummer.coords.CoordsDupsInProcessFunction
 import mummer.snps.MumSnpToVcf
 import org.apache.commons.io.FileUtils
+import util.TypedProperties
 
 class ISGPipelineQScript extends QScript {
 
@@ -36,6 +39,9 @@ class ISGPipelineQScript extends QScript {
   
   @Argument(doc="path to mummer.", shortName="mummer")
   var pathToMummer: String = null
+  
+  @Argument(doc="options file.", required=false)
+  var optionsFile: File = null
   
   @Argument(doc="Do not fail when encountering base qualities that are too high "+
             "and that seemingly indicate a problem with the base quality encoding"+ 
@@ -76,6 +82,7 @@ class ISGPipelineQScript extends QScript {
   var outDir: File = _
   var gbkDir: File = _
   var dupsDir: File = _
+  var typedProperties: TypedProperties = new TypedProperties()
   
   def init() {
     if(!isgRoot.exists){
@@ -110,6 +117,18 @@ class ISGPipelineQScript extends QScript {
     val matrix = new File(outDir, ".isg_out.tab.done")
     if(matrix.exists){
       matrix.delete
+    }
+    
+    if(optionsFile!=null){
+      typedProperties.loadFromFile(optionsFile)
+    }
+  }
+  
+  override def add(functions: QFunction*) {
+    //apply any user-defined arguments to function
+    for(f : QFunction <- functions){
+      typedProperties.applyToArgumentAnnotatedFieldsOfObjectUsingPrefix(f, f.analysisName+".")
+      super.add(f)
     }
   }
   
@@ -309,12 +328,11 @@ class ISGPipelineQScript extends QScript {
     this.isIntermediate = intermediate
   }
   
-  class Nucmer(inRef: File, inQry: File, prfx: String, coords: Boolean = true) extends NucmerCommandLineFunction {
+  class Nucmer(inRef: File, inQry: File, prfx: String) extends NucmerCommandLineFunction {
     this.mummerDir = new File(pathToMummer)
     this.refFasta = inRef
     this.qryFasta = inQry
     this.prefix = prfx
-    this.showCoords = coords
   }
   
   class DeltaFilter(inDeltaFile: File, outDeltaFile: File, ref: Boolean, qry: Boolean) extends DeltaFilterCommandLineFunction {

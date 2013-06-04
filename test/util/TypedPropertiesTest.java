@@ -4,6 +4,10 @@
  */
 package util;
 
+import java.lang.reflect.Field;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.broadinstitute.sting.commandline.Argument;
 import java.util.Properties;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -16,6 +20,11 @@ import static org.junit.Assert.*;
  */
 public class TypedPropertiesTest {
     
+    @Argument
+    public Integer testInteger;
+    public Integer testIntegerWithDefault = 100;
+    public TestEnum testEnum;
+    
     public TypedPropertiesTest() {
     }
 
@@ -25,6 +34,71 @@ public class TypedPropertiesTest {
 
     @AfterClass
     public static void tearDownClass() throws Exception {
+    }
+    
+    @Test
+    public void testApplyToOptionalArgumentFieldsOfObjectUsingPrefix() {
+        try {
+            System.out.println("applyToOptionalArgumentFieldsOfObjectUsingPrefix");
+            Properties props = new Properties();
+            props.put("prefix.anOptionalArgument","10");
+            props.put("prefix.aRequiredArgument","10");
+            TypedProperties instance = new TypedProperties(props);
+            ArgumentAnnotatedTestClass obj = new ArgumentAnnotatedTestClass();
+            Integer expectedOptionalArgumentWithDefault = obj.anOptionalArgumentWithDefault;
+            instance.applyToArgumentAnnotatedFieldsOfObjectUsingPrefix(obj, "prefix.");
+            assertEquals(new Integer(10), obj.anOptionalArgument);
+            assertEquals(expectedOptionalArgumentWithDefault, obj.anOptionalArgumentWithDefault);
+            assertEquals(new Integer(10), obj.aRequiredArgument);
+            assertTrue(obj.aBooleanWithDefault);
+        } catch (Exception ex) {
+            fail(ex.toString());
+        }
+    }
+    
+    @Test
+    public void testGetValueForFieldUsingPrefix() {
+        try {
+            System.out.println("getValueForFieldUsingPrefix");
+            
+            Properties props = new Properties();
+            props.put("prefix.testInteger","10");
+            props.put("testEnum",TestEnum.Test2.name());
+            TypedProperties instance = new TypedProperties(props);
+            
+            Field field = this.getClass().getField("testInteger");
+            Integer expResult = 10;
+            Object result = instance.getValueForFieldUsingPrefix(field, "prefix.");
+            assertEquals(expResult, result);
+            
+            field = this.getClass().getField("testEnum");
+            result = instance.getValueForFieldUsingPrefix(field, "");
+            assertEquals(TestEnum.Test2, result);
+        } catch (Exception ex) {
+            fail(ex.toString());
+        }
+    }
+    
+    @Test
+    public void getValueForFieldOfInstanceUsingPrefix() {
+        try {
+            System.out.println("getValueForFieldOfInstanceUsingPrefix");
+            
+            Properties props = new Properties();
+            props.put("testEnum",TestEnum.Test2.name());
+            TypedProperties instance = new TypedProperties(props);
+            
+            Field field = this.getClass().getField("testIntegerWithDefault");
+            Integer expResult = 100;
+            Object result = instance.getValueForFieldOfInstanceUsingPrefix(field, this, "prefix.");
+            assertEquals(expResult, result);
+            
+//            field = this.getClass().getField("testEnum");
+//            result = instance.getValueForFieldUsingPrefix(field, "");
+//            assertEquals(TestEnum.Test2, result);
+        } catch (Exception ex) {
+            fail(ex.toString());
+        }
     }
 
     /**
@@ -194,7 +268,7 @@ public class TypedPropertiesTest {
         TestEnum dflt = TestEnum.Test1;
         TypedProperties instance = new TypedProperties(props);
         Enum expResult = TestEnum.Test2;
-        Enum result = instance.getEnum(key, dflt);
+        Enum result = instance.getEnum(key, dflt, TestEnum.class);
         assertEquals(expResult, result);
         
         
@@ -207,7 +281,7 @@ public class TypedPropertiesTest {
         TestEnum dflt = TestEnum.Test1;
         TypedProperties instance = new TypedProperties(new Properties());
         Enum expResult = TestEnum.Test1;
-        Enum result = instance.getEnum(key, dflt);
+        Enum result = instance.getEnum(key, dflt, TestEnum.class);
         assertEquals(expResult, result);
     }
     
@@ -220,12 +294,23 @@ public class TypedPropertiesTest {
         TestEnum dflt = TestEnum.Test1;
         TypedProperties instance = new TypedProperties(props);
         Enum expResult = dflt;
-        Enum result = instance.getEnum(key, dflt);
+        Enum result = instance.getEnum(key, dflt, TestEnum.class);
         assertEquals(expResult, result);
     }
     
     enum TestEnum{
         Test1,
         Test2;
+    }
+    
+    private final class ArgumentAnnotatedTestClass{
+        @Argument(required=false)
+        public Integer anOptionalArgument;
+        @Argument(required=false)
+        public Integer anOptionalArgumentWithDefault = 100;
+        @Argument(required=false)
+        public Boolean aBooleanWithDefault = true;
+        @Argument(required=true)
+        public Integer aRequiredArgument;
     }
 }

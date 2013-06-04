@@ -37,12 +37,12 @@ public class BWAIndexCommandLineFunction extends BWACommandLineFunction {
 
     @Override
     public void freezeFieldValues() {
-        super.freezeFieldValues();
         bwt = new File(fastaFile.getPath() + ".bwt");
         amb = new File(fastaFile.getPath() + ".amb");
         ann = new File(fastaFile.getPath() + ".ann");
         pac = new File(fastaFile.getPath() + ".pac");
         sa = new File(fastaFile.getPath() + ".sa");
+        super.freezeFieldValues();
     }
     
     @Override

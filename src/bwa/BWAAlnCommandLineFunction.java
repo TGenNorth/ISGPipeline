@@ -48,12 +48,12 @@ public class BWAAlnCommandLineFunction extends BWACommandLineFunction {
     
     @Override
     public void freezeFieldValues() {
-        super.freezeFieldValues();
         bwt = new File(prefix + ".bwt");
         amb = new File(prefix + ".amb");
         ann = new File(prefix + ".ann");
         pac = new File(prefix + ".pac");
         sa = new File(prefix + ".sa");
+        super.freezeFieldValues();
     }
     
     /**

@@ -15,18 +15,6 @@ import org.broadinstitute.sting.commandline.Output;
  */
 public class NucmerCommandLineFunction extends MummerCommandLineFunction {
 
-    @Argument(doc = "reference prefix")
-    public String prefix;
-    
-    @Argument(doc = "generate coords")
-    public Boolean showCoords = false;
-    
-    @Argument(doc = "Use all anchor matches regardless of their uniqueness")
-    public Boolean maxmatch = false;
-    
-    @Argument(doc = "Simplify alignments by removing shadowed clusters.")
-    public Boolean simplify = true;
-    
     @Input(doc = "reference fasta file")
     public File refFasta;
     
@@ -38,14 +26,31 @@ public class NucmerCommandLineFunction extends MummerCommandLineFunction {
     
     @Output(doc = "coords output file", required=false)
     public File coordsFile;
+    
+    @Argument(doc = "reference prefix")
+    public String prefix;
+    
+    @Argument(doc = "generate coords")
+    public Boolean showCoords = true;
+    
+    @Argument(doc = "Use all anchor matches regardless of their uniqueness")
+    public Boolean maxmatch = false;
+    
+    @Argument(doc = "Simplify alignments by removing shadowed clusters.")
+    public Boolean simplify = true;
 
     @Override
+    public String analysisName() {
+        return "nucmer";
+    }
+    
+    @Override
     public void freezeFieldValues() {
-        super.freezeFieldValues();
         deltaFile = new File(prefix + ".delta");
         if (showCoords) {
             coordsFile = new File(prefix + ".coords");
         }
+        super.freezeFieldValues();
     }
 
     @Override
