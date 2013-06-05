@@ -102,7 +102,7 @@ public class BWAAlnCommandLineFunction extends BWACommandLineFunction {
     
     @Override
     public String analysisName() {
-        return "aln";
+        return "bwa.aln";
     }
     
     @Override
