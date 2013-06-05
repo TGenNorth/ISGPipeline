@@ -57,6 +57,11 @@ public class BWASampeCommandLineFunction extends BWACommandLineFunction {
     
     @Argument(required=false)
     public Boolean A = false;
+    
+    @Override
+    public String analysisName() {
+        return "bwa.sampe";
+    }
 
     @Override
     public String commandLine() {
