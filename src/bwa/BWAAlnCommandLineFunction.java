@@ -101,6 +101,11 @@ public class BWAAlnCommandLineFunction extends BWACommandLineFunction {
     public Boolean Y = false;
     
     @Override
+    public String analysisName() {
+        return "aln";
+    }
+    
+    @Override
     public void freezeFieldValues() {
         bwt = new File(prefix + ".bwt");
         amb = new File(prefix + ".amb");
