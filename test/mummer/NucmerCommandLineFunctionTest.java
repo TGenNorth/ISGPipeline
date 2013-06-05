@@ -45,7 +45,7 @@ public class NucmerCommandLineFunctionTest {
     public void testCommandLineShowCoords() {
         System.out.println("commandLineShowCoords");
         NucmerCommandLineFunction instance = createRequiredNucmer();
-        instance.showCoords = true;
+        instance.coords = true;
         String expResult = "'mummer/nucmer' '--coords' 'ref.fasta' 'qry.fasta'";
         String result = instance.commandLine();
         assertArrayEquals(expResult.trim().split("\\s+"), result.trim().split("\\s+"));
@@ -65,8 +65,88 @@ public class NucmerCommandLineFunctionTest {
     public void testCommandLineNoSimplify() {
         System.out.println("commandLineNoSimplify");
         NucmerCommandLineFunction instance = createRequiredNucmer();
-        instance.simplify = false;
+        instance.nosimplify = true;
         String expResult = "'mummer/nucmer' '--nosimplify' 'ref.fasta' 'qry.fasta'";
+        String result = instance.commandLine();
+        assertArrayEquals(expResult.trim().split("\\s+"), result.trim().split("\\s+"));
+    }
+    
+    @Test
+    public void testCommandLineMum() {
+        System.out.println("commandLineMum");
+        NucmerCommandLineFunction instance = createRequiredNucmer();
+        instance.mum = true;
+        String expResult = "'mummer/nucmer' '--mum' 'ref.fasta' 'qry.fasta'";
+        String result = instance.commandLine();
+        assertArrayEquals(expResult.trim().split("\\s+"), result.trim().split("\\s+"));
+    }
+    
+    @Test
+    public void testCommandLineBreaklen() {
+        System.out.println("commandLineBreaklen");
+        NucmerCommandLineFunction instance = createRequiredNucmer();
+        instance.breaklen = 10;
+        String expResult = "'mummer/nucmer' '--breaklen' '10' 'ref.fasta' 'qry.fasta'";
+        String result = instance.commandLine();
+        assertArrayEquals(expResult.trim().split("\\s+"), result.trim().split("\\s+"));
+    }
+    
+    @Test
+    public void testCommandLineMincluster() {
+        System.out.println("commandLineMincluster");
+        NucmerCommandLineFunction instance = createRequiredNucmer();
+        instance.mincluster = 10;
+        String expResult = "'mummer/nucmer' '--mincluster' '10' 'ref.fasta' 'qry.fasta'";
+        String result = instance.commandLine();
+        assertArrayEquals(expResult.trim().split("\\s+"), result.trim().split("\\s+"));
+    }
+    
+    @Test
+    public void testCommandLineDiagfactor() {
+        System.out.println("commandLineDiagfactor");
+        NucmerCommandLineFunction instance = createRequiredNucmer();
+        instance.diagfactor = 0.12F;
+        String expResult = "'mummer/nucmer' '--diagfactor' '0.12' 'ref.fasta' 'qry.fasta'";
+        String result = instance.commandLine();
+        assertArrayEquals(expResult.trim().split("\\s+"), result.trim().split("\\s+"));
+    }
+    
+    @Test
+    public void testCommandLineForward() {
+        System.out.println("commandLineForward");
+        NucmerCommandLineFunction instance = createRequiredNucmer();
+        instance.forward = true;
+        String expResult = "'mummer/nucmer' '--forward' 'ref.fasta' 'qry.fasta'";
+        String result = instance.commandLine();
+        assertArrayEquals(expResult.trim().split("\\s+"), result.trim().split("\\s+"));
+    }
+    
+    @Test
+    public void testCommandLineReverse() {
+        System.out.println("commandLineReverse");
+        NucmerCommandLineFunction instance = createRequiredNucmer();
+        instance.reverse = true;
+        String expResult = "'mummer/nucmer' '--reverse' 'ref.fasta' 'qry.fasta'";
+        String result = instance.commandLine();
+        assertArrayEquals(expResult.trim().split("\\s+"), result.trim().split("\\s+"));
+    }
+    
+    @Test
+    public void testCommandLineMaxgap() {
+        System.out.println("commandLineMaxgap");
+        NucmerCommandLineFunction instance = createRequiredNucmer();
+        instance.maxgap = 90;
+        String expResult = "'mummer/nucmer' '--maxgap' '90' 'ref.fasta' 'qry.fasta'";
+        String result = instance.commandLine();
+        assertArrayEquals(expResult.trim().split("\\s+"), result.trim().split("\\s+"));
+    }
+    
+    @Test
+    public void testCommandLineMinmatch() {
+        System.out.println("commandLineMinmatch");
+        NucmerCommandLineFunction instance = createRequiredNucmer();
+        instance.minmatch = 20;
+        String expResult = "'mummer/nucmer' '--minmatch' '20' 'ref.fasta' 'qry.fasta'";
         String result = instance.commandLine();
         assertArrayEquals(expResult.trim().split("\\s+"), result.trim().split("\\s+"));
     }

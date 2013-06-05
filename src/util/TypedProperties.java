@@ -87,6 +87,9 @@ public class TypedProperties {
         } else if (field.getType() == Boolean.class) {
             Boolean dflt = (Boolean) getValueOfFieldOfInstance(field, instance);
             return getBoolean(prefix + field.getName(), dflt);
+        }else if (field.getType() == Float.class) {
+            Float dflt = (Float) getValueOfFieldOfInstance(field, instance);
+            return getFloat(prefix + field.getName(), dflt);
         }else if (field.getType().isEnum()) {
             Enum dflt = (Enum) getValueOfFieldOfInstance(field, instance);
             return getEnum(prefix + field.getName(), dflt, (Class<Enum>) field.getType());
@@ -121,6 +124,14 @@ public class TypedProperties {
     public Double getDouble(final String key, final Double dflt) {
         try {
             return Double.valueOf(props.getProperty(key));
+        } catch (Exception e) {
+            return dflt;
+        }
+    }
+    
+    public Float getFloat(final String key, final Float dflt) {
+        try {
+            return Float.valueOf(props.getProperty(key));
         } catch (Exception e) {
             return dflt;
         }

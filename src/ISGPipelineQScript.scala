@@ -161,7 +161,7 @@ class ISGPipelineQScript extends QScript {
     val coords = new File(mummerDir, ref + "_" + ref + ".coords")
     val dups = new File(dupsDir, ref + ".interval_list")
     
-    add(new Nucmer(referenceFile, referenceFile, prefix))
+    add(new Nucmer(referenceFile, referenceFile, prefix, true, true))
     add(new CoordsDup(coords, referenceFile, dups))
     
     val fastas = FileUtils.listFiles(fastaDir, Array("fasta"), false)
@@ -170,7 +170,7 @@ class ISGPipelineQScript extends QScript {
       val prefix = mummerDir.getPath + "/" + sampleName + "_" + sampleName
       val selfCoords = new File(mummerDir, sampleName + "_" + sampleName + ".coords")
       val refCoords = new File(mummerDir, ref + "_" + sampleName + ".coords")
-      add(new Nucmer(fasta, fasta, prefix))
+      add(new Nucmer(fasta, fasta, prefix, true, true))
     }
   }
   
@@ -328,11 +328,14 @@ class ISGPipelineQScript extends QScript {
     this.isIntermediate = intermediate
   }
   
-  class Nucmer(inRef: File, inQry: File, prfx: String) extends NucmerCommandLineFunction {
+  class Nucmer(inRef: File, inQry: File, prfx: String, mm: Boolean = false, ns: Boolean = false) extends NucmerCommandLineFunction {
     this.mummerDir = new File(pathToMummer)
     this.refFasta = inRef
     this.qryFasta = inQry
     this.prefix = prfx
+    this.coords = true
+    this.maxmatch = mm
+    this.nosimplify = ns
   }
   
   class DeltaFilter(inDeltaFile: File, outDeltaFile: File, ref: Boolean, qry: Boolean) extends DeltaFilterCommandLineFunction {

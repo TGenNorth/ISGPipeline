@@ -30,14 +30,41 @@ public class NucmerCommandLineFunction extends MummerCommandLineFunction {
     @Argument(doc = "reference prefix")
     public String prefix;
     
-    @Argument(doc = "generate coords")
-    public Boolean showCoords = true;
-    
+    @Argument(doc = "Use anchor matches that are unique in both the reference and query", required=false)
+    public Boolean mum = false;
+
     @Argument(doc = "Use all anchor matches regardless of their uniqueness")
     public Boolean maxmatch = false;
     
+    @Argument(required=false)
+    public Integer breaklen;
+    
+    @Argument(required=false)
+    public Integer mincluster;
+    
+    @Argument(required=false)
+    public Float diagfactor;
+    
+    @Argument(required=false)
+    public Boolean forward = false;
+    
+    @Argument(required=false)
+    public Integer maxgap;
+    
+    @Argument(required=false)
+    public Integer minmatch;
+    
+    @Argument(required=false)
+    public Boolean nooptimize = false;
+    
+    @Argument(required=false)
+    public Boolean reverse = false;
+    
+    @Argument(doc = "generate coords")
+    public Boolean coords = false;
+    
     @Argument(doc = "Simplify alignments by removing shadowed clusters.")
-    public Boolean simplify = true;
+    public Boolean nosimplify = false;
 
     @Override
     public String analysisName() {
@@ -47,7 +74,7 @@ public class NucmerCommandLineFunction extends MummerCommandLineFunction {
     @Override
     public void freezeFieldValues() {
         deltaFile = new File(prefix + ".delta");
-        if (showCoords) {
+        if (coords) {
             coordsFile = new File(prefix + ".coords");
         }
         super.freezeFieldValues();
@@ -56,10 +83,19 @@ public class NucmerCommandLineFunction extends MummerCommandLineFunction {
     @Override
     public String commandLine() {
         return required(new File(mummerDir, "nucmer"))
-                + conditional(showCoords, "--coords", true, "%s")
+                + conditional(mum, "--mum", true, "%s")
                 + conditional(maxmatch, "--maxmatch", true, "%s")
-                + conditional(!simplify, "--nosimplify", true, "%s")
+                + optional("--breaklen", breaklen, "", true, true, "%s")
+                + optional("--mincluster", mincluster, "", true, true, "%s")
+                + optional("--diagfactor", diagfactor, "", true, true, "%s")
+                + conditional(forward, "--forward", true, "%s")
+                + optional("--maxgap", maxgap, "", true, true, "%s")
+                + optional("--minmatch", minmatch, "", true, true, "%s")
+                + conditional(coords, "--coords", true, "%s")
+                + conditional(nooptimize, "--nooptimize", true, "%s")
                 + conditional(prefix != null, prefix, true, "--prefix=%s")
+                + conditional(reverse, "--reverse", true, "%s")
+                + conditional(nosimplify, "--nosimplify", true, "%s")
                 + required(refFasta)
                 + required(qryFasta);
     }
