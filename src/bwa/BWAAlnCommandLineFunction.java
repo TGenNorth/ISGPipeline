@@ -46,6 +46,60 @@ public class BWAAlnCommandLineFunction extends BWACommandLineFunction {
     @Argument(required=false)
     public FastqQualityFormat qualFormat = null;
     
+    @Argument(required=false)
+    public Double n;
+    
+    @Argument(required=false)
+    public Integer o;
+    
+    @Argument(required=false)
+    public Integer e;
+    
+    @Argument(required=false)
+    public Integer i;
+    
+    @Argument(required=false)
+    public Integer d;
+    
+    @Argument(required=false)
+    public Integer l;
+    
+    @Argument(required=false)
+    public Integer k;
+    
+    @Argument(required=false)
+    public Integer m;
+    
+    @Argument(required=false)
+    public Integer t;
+    
+    @Argument(required=false)
+    public Integer M;
+    
+    @Argument(required=false)
+    public Integer O;
+    
+    @Argument(required=false)
+    public Integer E;
+    
+    @Argument(required=false)
+    public Integer R;
+    
+    @Argument(required=false)
+    public Integer q;
+    
+    @Argument(required=false)
+    public Integer B;
+    
+    @Argument(required=false)
+    public Boolean L = false;
+    
+    @Argument(required=false)
+    public Boolean N = false;
+
+    @Argument(required=false)
+    public Boolean Y = false;
+    
     @Override
     public void freezeFieldValues() {
         bwt = new File(prefix + ".bwt");
@@ -74,6 +128,24 @@ public class BWAAlnCommandLineFunction extends BWACommandLineFunction {
         return required(bwa)
                 + required("aln")
                 + conditional(isIllumina(), "-I", true, "%s")
+                + optional("-n", n, "", true, true, "%s")
+                + optional("-o", o, "", true, true, "%s")
+                + optional("-e", e, "", true, true, "%s")
+                + optional("-i", i, "", true, true, "%s")
+                + optional("-d", d, "", true, true, "%s")
+                + optional("-l", l, "", true, true, "%s")
+                + optional("-k", k, "", true, true, "%s")
+                + optional("-m", m, "", true, true, "%s")
+                + optional("-t", t, "", true, true, "%s")
+                + optional("-M", M, "", true, true, "%s")
+                + optional("-O", O, "", true, true, "%s")
+                + optional("-E", E, "", true, true, "%s")
+                + optional("-R", R, "", true, true, "%s")
+                + optional("-q", q, "", true, true, "%s")
+                + optional("-B", B, "", true, true, "%s")
+                + conditional(L, "-L", true, "%s")
+                + conditional(N, "-N", true, "%s")
+                + conditional(Y, "-Y", true, "%s")
                 + optional("-f")
                 + optional(saiFile)
                 + required(prefix)
