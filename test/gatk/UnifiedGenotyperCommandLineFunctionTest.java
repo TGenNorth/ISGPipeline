@@ -106,7 +106,7 @@ public class UnifiedGenotyperCommandLineFunctionTest {
     public void testCommandLineMinQualThreshold() {
         System.out.println("commandLineMinQualThreshold");
         UnifiedGenotyperCommandLineFunction instance = createStandardInstance();
-        instance.stand_call_conf = 30;
+        instance.standard_min_confidence_threshold_for_calling = 30;
         String expResult = createStandardResult() + 
                 "  '--standard_min_confidence_threshold_for_calling' '30'";
         String result = instance.commandLine();
@@ -117,7 +117,7 @@ public class UnifiedGenotyperCommandLineFunctionTest {
     public void testCommandLineMinQualThresholdEmit() {
         System.out.println("commandLineMinQualThresholdEmi");
         UnifiedGenotyperCommandLineFunction instance = createStandardInstance();
-        instance.stand_emit_conf = 0;
+        instance.standard_min_confidence_threshold_for_emitting = 0;
         String expResult = createStandardResult() + 
                 "  '--standard_min_confidence_threshold_for_emitting' '0'";
         String result = instance.commandLine();
@@ -128,7 +128,7 @@ public class UnifiedGenotyperCommandLineFunctionTest {
     public void testCommandLineContamination() {
         System.out.println("commandLineContamination");
         UnifiedGenotyperCommandLineFunction instance = createStandardInstance();
-        instance.contamination = 0.05;
+        instance.contamination_fraction_to_filter = 0.05;
         String expResult = createStandardResult() + 
                 "  '-contamination' '0.05'";
         String result = instance.commandLine();

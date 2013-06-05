@@ -47,7 +47,7 @@ public class CallableLociCommandLineFunctionTest {
     public void testCommandLineFrlmq() {
         System.out.println("commandLineFrlmq");
         CallableLociCommandLineFunction instance = createStandardInstance();
-        instance.frlmq = 0.1;
+        instance.maxFractionOfReadsWithLowMAPQ = 0.1;
         String expResult = createStandardResult();
         expResult += " '-frlmq' '0.1'";
         String result = instance.commandLine();

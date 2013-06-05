@@ -20,7 +20,7 @@ public class CallableLociCommandLineFunction extends GATKCommandLineFunction {
     public File summary;
     
     @Argument(doc = "If the fraction of reads at a base with low mapping quality exceeds this value, the site may be poorly mapped", required=false)
-    public Double frlmq;
+    public Double maxFractionOfReadsWithLowMAPQ;
     
     @Argument(doc = "Maximum read depth before a locus is considered poorly mapped", required=false)
     public Integer maxDepth;
@@ -50,7 +50,7 @@ public class CallableLociCommandLineFunction extends GATKCommandLineFunction {
         return super.commandLine() 
                 + required("-o", out, "", true, true, "%s")
                 + required("-summary", summary, "", true, true, "%s")
-                + optional("-frlmq", frlmq, "", true, true, "%s")
+                + optional("-frlmq", maxFractionOfReadsWithLowMAPQ, "", true, true, "%s")
                 + optional("--maxDepth", maxDepth, "", true, true, "%s")
                 + optional("--maxLowMAPQ", maxLowMAPQ, "", true, true, "%s")
                 + optional("--minBaseQuality", minBaseQuality, "", true, true, "%s")

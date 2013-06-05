@@ -17,9 +17,7 @@ import util.TypedProperties;
  * @author jbeckstrom
  */
 public class UnifiedGenotyperCommandLineFunction extends GATKCommandLineFunction {
- 
-    public static final String COMMAND_PREFIX = "ug.";
-    
+
     public enum OutMode {
         EMIT_VARIANTS_ONLY,
         EMIT_ALL_CONFIDENT_SITES,
@@ -50,7 +48,7 @@ public class UnifiedGenotyperCommandLineFunction extends GATKCommandLineFunction
     public GenotypeLikelihoodsModel genotype_likelihoods_model;
     
     @Argument(doc = "Fraction of contamination in sequencing data (for all samples) to aggressively remove", required=false)
-    public Double contamination;
+    public Double contamination_fraction_to_filter;
     
     @Argument(doc = "Heterozygosity value used to compute prior likelihoods for any locus", required=false)
     public Double heterozygosity;
@@ -62,16 +60,16 @@ public class UnifiedGenotyperCommandLineFunction extends GATKCommandLineFunction
     public Double maxDeletionFraction;
     
     @Argument(doc = "Minimum number of consensus indels required to trigger genotyping run", required=false)
-    public Integer minIndelCnt;
+    public Integer min_indel_count_for_genotyping;
     
     @Argument(doc = "Minimum fraction of all reads at a locus that must contain an indel (of any allele) for that sample to contribute to the indel count for alleles", required=false)
-    public Double minIndelFrac;
+    public Double min_indel_fraction_per_sample;
     
     @Argument(doc = "The PairHMM implementation to use for -glm INDEL genotype likelihood calculations", required=false)
-    public HmmImplementation pairHmmImpl;
+    public HmmImplementation pair_hmm_implementation;
     
     @Argument(doc = "The PCR error rate to be used for computing fragment-based likelihoods", required=false)
-    public Double pcrErrorRate;
+    public Double pcr_error_rate;
     
     @Argument(doc = "Indel gap continuation penalty, as Phred-scaled probability. I.e., 30 => 10^-30/10", required=false)
     public Byte indelGapContinuationPenalty;
@@ -79,16 +77,16 @@ public class UnifiedGenotyperCommandLineFunction extends GATKCommandLineFunction
     @Argument(doc = "Indel gap open penalty, as Phred-scaled probability. I.e., 30 => 10^-30/10", required=false)
     public Byte indelGapOpenPenalty;
     
-    @Argument(doc = "out mode", required=false)
-    public Integer stand_call_conf;
+    @Argument(required=false)
+    public Integer standard_min_confidence_threshold_for_calling;
     
-    @Argument(doc = "out mode", required=false)
-    public Integer stand_emit_conf;
+    @Argument(required=false)
+    public Integer standard_min_confidence_threshold_for_emitting;
     
-    @Argument(doc = "out mode", required=false)
+    @Argument(required=false)
     public Integer ploidy;
     
-    @Argument(doc = "out mode", required=false)
+    @Argument(required=false)
     public Integer min_base_quality;
 
     @Override
@@ -102,18 +100,18 @@ public class UnifiedGenotyperCommandLineFunction extends GATKCommandLineFunction
                 + required("-o", out, "", true, true, "%s")
                 + optional("--output_mode", outMode, "", true, true, "%s")
                 + optional("--genotype_likelihoods_model", genotype_likelihoods_model, "", true, true, "%s")
-                + optional("--standard_min_confidence_threshold_for_calling", stand_call_conf, "", true, true, "%s")
-                + optional("--standard_min_confidence_threshold_for_emitting", stand_emit_conf, "", true, true, "%s")
+                + optional("--standard_min_confidence_threshold_for_calling", standard_min_confidence_threshold_for_calling, "", true, true, "%s")
+                + optional("--standard_min_confidence_threshold_for_emitting", standard_min_confidence_threshold_for_emitting, "", true, true, "%s")
                 + optional("--min_base_quality_score", min_base_quality, "", true, true, "%s")
                 + optional("-ploidy", ploidy, "", true, true, "%s")
-                + optional("-contamination", contamination, "", true, true, "%s")
+                + optional("-contamination", contamination_fraction_to_filter, "", true, true, "%s")
                 + optional("--heterozygosity", heterozygosity, "", true, true, "%s")
                 + optional("--indel_heterozygosity", indelHeterozygosity, "", true, true, "%s")
                 + optional("--max_deletion_fraction", maxDeletionFraction, "", true, true, "%s")
-                + optional("-minIndelCnt", minIndelCnt, "", true, true, "%s")
-                + optional("-minIndelFrac", minIndelFrac, "", true, true, "%s")
-                + optional("--pair_hmm_implementation", pairHmmImpl, "", true, true, "%s")
-                + optional("--pcr_error_rate", pcrErrorRate, "", true, true, "%s")
+                + optional("-minIndelCnt", min_indel_count_for_genotyping, "", true, true, "%s")
+                + optional("-minIndelFrac", min_indel_fraction_per_sample, "", true, true, "%s")
+                + optional("--pair_hmm_implementation", pair_hmm_implementation, "", true, true, "%s")
+                + optional("--pcr_error_rate", pcr_error_rate, "", true, true, "%s")
                 + optional("--indelGapContinuationPenalty", indelGapContinuationPenalty, "", true, true, "%s")
                 + optional("--indelGapOpenPenalty", indelGapOpenPenalty, "", true, true, "%s");
     }

@@ -380,8 +380,8 @@ class ISGPipelineQScript extends QScript {
     this.inputFile = bam
     this.referenceFile = ref
     this.out = outVCF
-    this.stand_emit_conf = 0
-    this.min_base_quality = 0
+    this.standard_min_confidence_threshold_for_calling = 0
+    this.standard_min_confidence_threshold_for_emitting = 0
     this.genotype_likelihoods_model = GenotypeLikelihoodsModel.BOTH
   }
   
