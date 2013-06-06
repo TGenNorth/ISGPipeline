@@ -43,6 +43,21 @@ class ISGPipelineQScript extends QScript {
   @Argument(doc="options file.", required=false)
   var optionsFile: File = null
   
+  @Argument(doc="Ploidy", required=false)
+  var ploidy: java.lang.Integer = 1
+  
+  @Argument(doc="The minimum allele frequency of an alternative base needed to call a variant.", required=false)
+  var minAF: Float = 1.0F
+  
+  @Argument(doc="The minimum Phred scaled probability needed to call a variant.", required=false)
+  var minQual: java.lang.Integer = 30
+  
+  @Argument(doc="The minimum genotype quality needed to call a variant.", required=false)
+  var minGQ: java.lang.Integer = 4
+  
+  @Argument(doc="The minimum depth of reads needed to call a variant.", required=false) 
+  var minDP: java.lang.Integer = 3
+  
   @Argument(doc="Do not fail when encountering base qualities that are too high "+
             "and that seemingly indicate a problem with the base quality encoding"+ 
             "of the BAM file", required=false)
@@ -407,10 +422,10 @@ class ISGPipelineQScript extends QScript {
   }
   
   class ISG(@Input input: Seq[File], @Input covFiles: Seq[File], @Input ref: File, @Output out: File) extends JavaCommandLineFunction {
-    analysisName = "createFastaIndex"
+    analysisName = "isg"
     javaMainClass = "isg.ISG2"
     var samples: List[String] = Nil
-    
+
     override def freezeFieldValues() {
       super.freezeFieldValues()
       for(in : File <- input){
@@ -425,6 +440,11 @@ class ISGPipelineQScript extends QScript {
       required("VCF_DIR="+vcfDir) +
       required("COV_DIR="+covDir) +
       required("GBK_DIR="+gbkDir) +
+      optional("PLOIDY="+ploidy) +
+      optional("MIN_AF="+minAF) +
+      optional("MIN_QUAL="+minQual) +
+      optional("MIN_GQ="+minGQ) +
+      optional("MIN_DP="+minDP) +
       optional("INDEL="+includeIndels)
   }
   

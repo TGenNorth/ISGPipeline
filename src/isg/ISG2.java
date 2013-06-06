@@ -55,6 +55,8 @@ public class ISG2 extends CommandLineProgram {
     public File GBK_DIR;
     @Option(doc = "Reference sequence.", optional = false)
     public File REF;
+    @Option(doc = "The ploidy of the genome", optional = false)
+    public int PLOIDY = 1;
     @Option(doc = "The minimum allele frequency of an alternative base needed to call a SNP.", optional = false)
     public float MIN_AF = 1.0F;
     @Option(doc = "The minimum Phred scaled probability needed to call a SNP", optional = false)
@@ -127,7 +129,7 @@ public class ISG2 extends CommandLineProgram {
     }
     
     private List<Iterator<VariantContext>> fixPloidy(List<Iterator<VariantContext>> iters) {
-        return applyAlgorithm(iters, new FixPloidy(1));
+        return applyAlgorithm(iters, new FixPloidy(PLOIDY));
     }
 
     private Iterator<VariantContext> mergeSNPs(List<Iterator<VariantContext>> iters) {
@@ -190,7 +192,7 @@ public class ISG2 extends CommandLineProgram {
     }
     
     private MarkAmbiguousInfo createMarkAmbiguousInfo() {
-        return new MarkAmbiguousInfo.Builder().maxNumAlt(1).minAF(MIN_AF).minDP(MIN_DP).minGQ(MIN_GQ).minQual(MIN_QUAL).build();
+        return new MarkAmbiguousInfo.Builder().maxNumAlt(PLOIDY).minAF(MIN_AF).minDP(MIN_DP).minGQ(MIN_GQ).minQual(MIN_QUAL).build();
     }
 
     private VariantContextTabWriter openFileForWriting(File f) {
