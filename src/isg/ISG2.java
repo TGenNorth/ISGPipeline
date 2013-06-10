@@ -51,8 +51,8 @@ public class ISG2 extends CommandLineProgram {
     public File VCF_DIR;
     @Option(doc = "Directory containing alignment coverage files.", optional = false)
     public File COV_DIR;
-    @Option(doc = "Directory containing genbank files.", optional = false)
-    public File GBK_DIR;
+    @Option(doc = "Interval list of duplicated regions.", optional = false)
+    public File DUPS_FILE;
     @Option(doc = "Reference sequence.", optional = false)
     public File REF;
     @Option(doc = "The ploidy of the genome", optional = false)
@@ -110,12 +110,13 @@ public class ISG2 extends CommandLineProgram {
 
         writeToFile(
                 filterUnambiguousSNPs(
+                markDuplicates(
                 genotypeNoCalls(
                 mergeSNPs(
                 fixPloidy(
                 markAmbiguous(
                 filterSNPs(
-                createVCFIters(keys))))))));
+                createVCFIters(keys)))))))));
 
         return 0;
     }
@@ -127,7 +128,7 @@ public class ISG2 extends CommandLineProgram {
     private List<Iterator<VariantContext>> markAmbiguous(List<Iterator<VariantContext>> iters) {
         return applyAlgorithm(iters, new MarkAmbiguous(createMarkAmbiguousInfo()));
     }
-    
+
     private List<Iterator<VariantContext>> fixPloidy(List<Iterator<VariantContext>> iters) {
         return applyAlgorithm(iters, new FixPloidy(PLOIDY));
     }
@@ -138,6 +139,10 @@ public class ISG2 extends CommandLineProgram {
 
     private Iterator<VariantContext> genotypeNoCalls(Iterator<VariantContext> iter) {
         return new AlgorithmApplyingIterator<VariantContext, VariantContext>(iter, new GenotypeNoCalls(createGenotypers(new HashSet<String>(SAMPLE))));
+    }
+
+    private Iterator<VariantContext> markDuplicates(Iterator<VariantContext> iter) {
+        return new AlgorithmApplyingIterator<VariantContext, VariantContext>(iter, MarkDuplicates.createFromIntervalListFile(DUPS_FILE));
     }
 
     private Iterator<VariantContext> filterUnambiguousSNPs(Iterator<VariantContext> iter) {
@@ -151,10 +156,14 @@ public class ISG2 extends CommandLineProgram {
         long written = 0;
         System.out.println("processing...");
         while (iter.hasNext()) {
-            vcWriter.add(iter.next());
-            if (++written % 100000 == 0) {
-                System.out.println("Written " + written + " records.");
+            VariantContext vc = iter.next();
+            if (!vc.getFilters().contains(MarkDuplicates.DUPLICATE_FILTER)) {
+                vcWriter.add(iter.next());
+                if (++written % 100000 == 0) {
+                    System.out.println("Written " + written + " records.");
+                }
             }
+
         }
         vcWriter.close();
     }
@@ -190,7 +199,7 @@ public class ISG2 extends CommandLineProgram {
         }
         return ret;
     }
-    
+
     private MarkAmbiguousInfo createMarkAmbiguousInfo() {
         return new MarkAmbiguousInfo.Builder().maxNumAlt(PLOIDY).minAF(MIN_AF).minDP(MIN_DP).minGQ(MIN_GQ).minQual(MIN_QUAL).build();
     }
@@ -263,5 +272,4 @@ public class ISG2 extends CommandLineProgram {
             throw new PicardException("An error occured trying to read file: " + f.getAbsolutePath(), ex);
         }
     }
-
 }

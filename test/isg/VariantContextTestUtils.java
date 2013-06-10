@@ -68,6 +68,7 @@ public class VariantContextTestUtils {
         assertEquals(vc1.getAlleles(), vc2.getAlleles());
         assertEquals(vc1.getNSamples(), vc2.getNSamples());
         assertEquals(vc1.getLog10PError(), vc2.getLog10PError(), 0);
+        assertEquals(vc1.getFilters(), vc2.getFilters());
         if (!ignoreAttributes) {
             assertEquals(vc1.getAttributes(), vc2.getAttributes());
         }

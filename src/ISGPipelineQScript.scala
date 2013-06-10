@@ -88,6 +88,7 @@ class ISGPipelineQScript extends QScript {
   }
   
   var referenceFile: File = _
+  var refDups: File = _
   var fastaDir: File = _
   var mummerDir: File = _
   var readsDir: File = _
@@ -166,7 +167,7 @@ class ISGPipelineQScript extends QScript {
     callSnpsAndCalculateCoverage
     
     val matrix = new File(outDir, "isg_out.tab")
-    add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile, matrix))
+    add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile, refDups, matrix))
     
   }
   
@@ -174,10 +175,10 @@ class ISGPipelineQScript extends QScript {
     val ref = stripExtension(referenceFile)
     val prefix = mummerDir.getPath + "/" + ref + "_" + ref
     val coords = new File(mummerDir, ref + "_" + ref + ".coords")
-    val dups = new File(dupsDir, ref + ".interval_list")
+    refDups = new File(dupsDir, ref + ".interval_list")
     
     add(new Nucmer(referenceFile, referenceFile, prefix, true, true))
-    add(new CoordsDup(coords, referenceFile, dups))
+    add(new CoordsDup(coords, referenceFile, refDups))
     
     val fastas = FileUtils.listFiles(fastaDir, Array("fasta"), false)
     for (fasta <- fastas){
@@ -421,7 +422,7 @@ class ISGPipelineQScript extends QScript {
     override def commandLine = super.commandLine + required("R=" + ref)
   }
   
-  class ISG(@Input input: Seq[File], @Input covFiles: Seq[File], @Input ref: File, @Output out: File) extends JavaCommandLineFunction {
+  class ISG(@Input input: Seq[File], @Input covFiles: Seq[File], @Input ref: File, @Input dups: File, @Output out: File) extends JavaCommandLineFunction {
     analysisName = "isg"
     javaMainClass = "isg.ISG2"
     var samples: List[String] = Nil
@@ -439,7 +440,7 @@ class ISGPipelineQScript extends QScript {
       required("REF="+ref) +
       required("VCF_DIR="+vcfDir) +
       required("COV_DIR="+covDir) +
-      required("GBK_DIR="+gbkDir) +
+      required("DUPS_FILE="+dups) +
       optional("PLOIDY="+ploidy) +
       optional("MIN_AF="+minAF) +
       optional("MIN_QUAL="+minQual) +
