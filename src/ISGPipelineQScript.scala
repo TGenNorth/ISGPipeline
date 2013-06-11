@@ -28,19 +28,19 @@ import util.TypedProperties
 
 class ISGPipelineQScript extends QScript {
 
-  @Input(doc="The directory to output.", shortName="isg")
+  @Input(doc="The analysis directory.", shortName="isg")
   var isgRoot: File = null
   
-  @Argument(doc="gatkJarFile", shortName="gatk")
+  @Argument(doc="Path to GATK jar file", shortName="gatk", required=false)
   var gatkJarFile: File = null
   
-  @Argument(doc="path to bwa.", shortName="bwa", required=false)
+  @Argument(doc="Path to bwa executable.", shortName="bwa", required=false)
   var pathToBWA: String = null
   
-  @Argument(doc="path to mummer.", shortName="mummer")
+  @Argument(doc="Path to mummer directory.", shortName="mummer", required=false)
   var pathToMummer: String = null
   
-  @Argument(doc="options file.", required=false)
+  @Argument(doc="Path to options file.", required=false)
   var optionsFile: File = null
   
   @Argument(doc="Ploidy", required=false)
@@ -138,6 +138,11 @@ class ISGPipelineQScript extends QScript {
     if(optionsFile!=null){
       typedProperties.loadFromFile(optionsFile)
     }
+    
+    if(referenceFile.exists){
+      add(new CreateDict(referenceFile))
+      add(new CreateFAI(referenceFile))
+    }
   }
   
   override def add(functions: QFunction*) {
@@ -164,14 +169,19 @@ class ISGPipelineQScript extends QScript {
     bwa
     mummer
     dups
-    callSnpsAndCalculateCoverage
+    callSnpsAndCalculateCoverageOnBams
+    callSnpsAndCalculateCoverageOnFastas
     
-    val matrix = new File(outDir, "isg_out.tab")
-    add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile, refDups, matrix))
+    if(!VCF_FILES.isEmpty){
+      val matrix = new File(outDir, "isg_out.tab")
+      add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile, refDups, matrix))
+    }
     
   }
   
   def dups() {
+    if(pathToMummer==null) return
+    
     val ref = stripExtension(referenceFile)
     val prefix = mummerDir.getPath + "/" + ref + "_" + ref
     val coords = new File(mummerDir, ref + "_" + ref + ".coords")
@@ -191,8 +201,8 @@ class ISGPipelineQScript extends QScript {
   }
   
   def mummer() {
-    add(new CreateDict(referenceFile))
-    add(new CreateFAI(referenceFile))
+    if(pathToMummer==null) return
+    
     val fastas = FileUtils.listFiles(fastaDir, Array("fasta"), false)
     for (fasta <- fastas){
       
@@ -226,6 +236,8 @@ class ISGPipelineQScript extends QScript {
    * Add commands for a bwa run
    */
   def bwa() {
+    if(pathToBWA==null) return;
+    
     val prefix = referenceFile.getPath
     add(new BWAIndex(referenceFile))
     
@@ -257,7 +269,8 @@ class ISGPipelineQScript extends QScript {
     }
   }
   
-  def callSnpsAndCalculateCoverage() {
+  def callSnpsAndCalculateCoverageOnBams() {
+    if(gatkJarFile==null) return
     for(bam : File <- BAM_FILES){
       val sample = stripExtension(bam)
       val vcf = new File(vcfDir, sample + ".vcf")
@@ -267,7 +280,10 @@ class ISGPipelineQScript extends QScript {
       addCov(bed)
       addVcf(vcf)
     }
-    
+  }
+  
+  def callSnpsAndCalculateCoverageOnFastas() {
+    if(pathToMummer==null) return
     for(fasta : File <- FASTA_FILES){
       val sample = stripExtension(fasta)
       val coords = new File(mummerDir, stripExtension(referenceFile) + "_" + stripExtension(fasta) + ".coords")
