@@ -12,9 +12,29 @@
     <import file="nbproject/build-impl.xml"/>
     
     <target name="-post-jar">
+        <property name="version.num" value="0.16.1" />
+<!--        <buildnumber file="build.num" />-->
+        <tstamp>
+            <format property="NOW" pattern="yyyy-MM-dd HH:mm:ss z" />
+        </tstamp>
+    
+    <!-- Add the version information to the manifest file -->
+<!--        <jar>
+            <manifest>
+                <attribute name="${application.title}-Version" value="${version.num}" />
+                <attribute name="PROJECT_NAME-SVN-Revision" value="${svna.version}" />
+                <attribute name="${application.title}-BuildStamp" value="${NOW}" />
+            </manifest>
+        </jar>-->
+
+    <!--Sign the jar file with you credentials -->
+    <!--<signjar jar="${dist.jar}" alias="..." keystore="..." storepass="..." />-->
+    
+    <!-- Make a copy of the jar file and add the version number to the filename -->
+        <copy file="${dist.jar}" tofile="${dist.dir}/${application.title}-${version.num}.jar" />
         <copy file="src/ISGPipelineQScript.scala" todir="dist/"/>
     </target>
-    
+
     <target name="package-for-store" depends="jar">
 
         
