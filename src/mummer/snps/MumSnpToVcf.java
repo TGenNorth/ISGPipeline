@@ -37,6 +37,7 @@ import isg.util.Filter;
 import isg.util.FilteringIterator;
 import isg.util.VariantContextComparator;
 import java.io.FileInputStream;
+import java.util.Comparator;
 import net.sf.picard.reference.ReferenceSequenceFileFactory;
 import net.sf.samtools.SAMTextHeaderCodec;
 import net.sf.samtools.util.BufferedLineReader;
@@ -99,19 +100,30 @@ public class MumSnpToVcf extends AbstractInProcessFunction {
                 createMumSnpIter(refSnpsFile), new CompositeFilter<MumSNPFeature>(new UniqueFilter(), REF_FILTER));
         final Iterator<MumSNPFeature> qryIter = new FilteringIterator<MumSNPFeature>(
                 createMumSnpIter(querySnpsFile), new CompositeFilter<MumSNPFeature>(new UniqueFilter(), QRY_FILTER));
+        
+        final VariantContextComparator vcCmp = new VariantContextComparator(seqDict);
+        final List<VariantContext> sortedRefList = iterToSortedList(new AlgorithmApplyingIterator<MumSNPFeature, VariantContext>(refIter, converter), vcCmp);
+        final List<VariantContext> sortedQryList = iterToSortedList(new AlgorithmApplyingIterator<MumSNPFeature, VariantContext>(qryIter, converter), vcCmp);
+        
+        final List<Iterator<VariantContext>> iters = Arrays.asList(sortedRefList.iterator(), sortedQryList.iterator());
+        
         final List<VariantContext> snps = new ArrayList<VariantContext>();
-        
-        final List<Iterator<VariantContext>> iters = new ArrayList<Iterator<VariantContext>>();
-        iters.add(new AlgorithmApplyingIterator<MumSNPFeature, VariantContext>(refIter, converter));
-        iters.add(new AlgorithmApplyingIterator<MumSNPFeature, VariantContext>(qryIter, converter));
-        
         final MumSNPMarkAmbiguous iter = new MumSNPMarkAmbiguous(iters, seqDict);
         while (iter.hasNext()) {
             snps.add(iter.next());
         }
 
-        Collections.sort(snps, new VariantContextComparator(seqDict));
+        Collections.sort(snps, vcCmp);
         writeToFile(snps);
+    }
+    
+    public static <T> List<T> iterToSortedList(final Iterator<T> iter, final Comparator<T> cmp){
+        final List<T> ret = new ArrayList<T>();
+        while(iter.hasNext()){
+            ret.add(iter.next());
+        }
+        Collections.sort(ret, cmp);
+        return ret;
     }
 
     public static CloseableTribbleIterator<MumSNPFeature> createMumSnpIter(File snps) {
