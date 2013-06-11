@@ -158,7 +158,7 @@ public class ISG2 extends CommandLineProgram {
         while (iter.hasNext()) {
             VariantContext vc = iter.next();
             if (!vc.getFilters().contains(MarkDuplicates.DUPLICATE_FILTER)) {
-                vcWriter.add(iter.next());
+                vcWriter.add(vc);
                 if (++written % 100000 == 0) {
                     System.out.println("Written " + written + " records.");
                 }
