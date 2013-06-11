@@ -30,33 +30,54 @@ import java.util.Comparator;
 import java.util.Iterator;
 
 /**
- * Iterator for SAM records that implements comparable to enable sorting of iterators.
+ * Iterator that implements comparable to enable sorting of iterators.
  * The comparison is performed by comparing the next record in the iterator to the next
- * record in another iterator and returning the ordering between those SAM records.
+ * record in another iterator and returning the ordering between those records.
  */
 public class ComparableIterator<T> extends PeekableIterator<T> implements Comparable<ComparableIterator<T>> {
     private final Comparator<T> comparator;
     private final String id;
+    private final boolean validateSorting;
 
     /**
      * Constructs a wrapping iterator around the given iterator that will be able
-     * to compare itself to other ComparableSamRecordIterators using the given comparator.
+     * to compare itself to other ComparableIterators using the given comparator.
      *
      * @param iterator the wrapped iterator.
-     * @param comparator the Comparator to use to provide ordering fo SAMRecords
+     * @param comparator the Comparator to use to provide ordering
      */
     public ComparableIterator(final Iterator<T> iterator, final Comparator<T> comparator) {
         this(iterator, comparator, null);
     }
     
     public ComparableIterator(final Iterator<T> iterator, final Comparator<T> comparator, final String id) {
+        this(iterator, comparator, id, false);
+    }
+    
+    public ComparableIterator(final Iterator<T> iterator, final Comparator<T> comparator, final String id, final boolean validateSorting) {
         super(iterator);  
         this.comparator = comparator;
         this.id = id;
+        this.validateSorting = validateSorting;
     }
 
     public String getId() {
         return id;
+    }
+
+    @Override
+    public T next() {
+        final T ret = super.next();
+        if(validateSorting){
+            //verify proper sorting
+            final T next = super.peek();
+            if(next!=null && comparator.compare(next, ret)<0){
+                throw new IllegalStateException(
+                        String.format("Elements of iterator are not in ascending order. "
+                        + "The next record '%s' is less than the current record '%s'", next, ret));
+            }
+        }
+        return ret;
     }
     
     /**
@@ -70,7 +91,7 @@ public class ComparableIterator<T> extends PeekableIterator<T> implements Compar
     @Override
     public int compareTo(final ComparableIterator<T> that) {
         if (this.comparator.getClass() != that.comparator.getClass()) {
-            throw new IllegalStateException("Attempt to compare two ComparableSAMRecordIterators that " +
+            throw new IllegalStateException("Attempt to compare two ComparableIterators that " +
                     "have different orderings internally");
         }
 

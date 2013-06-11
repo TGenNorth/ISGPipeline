@@ -34,7 +34,7 @@ public class MergingVariantContextIterator implements Iterator<VariantContext> {
         this.cmp = new VariantContextComparator(dict);
         this.pq = new PriorityQueue<ComparableIterator<VariantContext>>(iters.size());
         for (int i=0; i<iters.size(); i++) {
-            addIfNotEmpty(new ComparableIterator<VariantContext>(iters.get(i), cmp));
+            addIfNotEmpty(new ComparableIterator<VariantContext>(iters.get(i), cmp, "",true));
         }
     }
 

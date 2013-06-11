@@ -27,7 +27,7 @@ public abstract class AbstractMergingIterator<T, K> implements Iterator<K> {
         this.cmp = cmp;
         this.pq = new PriorityQueue<ComparableIterator<T>>();
         for (int i=0; i<iters.size(); i++) {
-            addIfNotEmpty(new ComparableIterator<T>(iters.get(i), cmp));
+            addIfNotEmpty(new ComparableIterator<T>(iters.get(i), cmp, "", true));
         }
     }
 
