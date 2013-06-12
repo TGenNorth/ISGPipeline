@@ -51,8 +51,6 @@ public class ISG2 extends CommandLineProgram {
     public File VCF_DIR;
     @Option(doc = "Directory containing alignment coverage files.", optional = false)
     public File COV_DIR;
-    @Option(doc = "Interval list of duplicated regions.", optional = false)
-    public File DUPS_FILE;
     @Option(doc = "Reference sequence.", optional = false)
     public File REF;
     @Option(doc = "The ploidy of the genome", optional = false)
@@ -68,8 +66,6 @@ public class ISG2 extends CommandLineProgram {
     @Option(doc = "Process indels.", optional = false)
     public boolean INDEL = false;
     public static final String ALL_VARIANTS_FILENAME = "all.variants.txt";
-    public static final String UNIQUE_VARIANTS_FILENAME = "unique.variants.txt";
-    public static final String DUPS_VARIANTS_FILENAME = "dups.variants.txt";
     private SAMSequenceDictionary dict;
     private static final String AMBIGUOUS_CALL_STRING = "N";
     private static final Allele AMBIGUOUS_CALL = Allele.create(AMBIGUOUS_CALL_STRING);
@@ -113,13 +109,12 @@ public class ISG2 extends CommandLineProgram {
 
         writeToFile(
                 filterUnambiguousSNPs(
-                markDuplicates(
                 genotypeNoCalls(
                 mergeSNPs(
                 fixPloidy(
                 markAmbiguous(
                 filterSNPs(
-                createVCFIters(keys)))))))));
+                createVCFIters(keys))))))));
 
         return 0;
     }
@@ -144,10 +139,6 @@ public class ISG2 extends CommandLineProgram {
         return new AlgorithmApplyingIterator<VariantContext, VariantContext>(iter, new GenotypeNoCalls(createGenotypers(new HashSet<String>(SAMPLE))));
     }
 
-    private Iterator<VariantContext> markDuplicates(Iterator<VariantContext> iter) {
-        return new AlgorithmApplyingIterator<VariantContext, VariantContext>(iter, MarkDuplicates.createFromIntervalListFile(DUPS_FILE));
-    }
-
     private Iterator<VariantContext> filterUnambiguousSNPs(Iterator<VariantContext> iter) {
         return new FilteringIterator<VariantContext>(iter, UNAMBIGUOUS_FILTER);
     }
@@ -155,24 +146,15 @@ public class ISG2 extends CommandLineProgram {
     private void writeToFile(Iterator<VariantContext> iter) {
         final VariantContextTabHeader vcHeader = new VariantContextTabHeader(Collections.EMPTY_LIST, new HashSet<String>(SAMPLE));
         final VariantContextTabWriter allWriter = openFileForWriting(new File(OUT_DIR, ALL_VARIANTS_FILENAME));
-        final VariantContextTabWriter uniqueWriter = openFileForWriting(new File(OUT_DIR, UNIQUE_VARIANTS_FILENAME));
-        final VariantContextTabWriter dupsWriter = openFileForWriting(new File(OUT_DIR, DUPS_VARIANTS_FILENAME));
 
         //write header
         allWriter.writeHeader(vcHeader);
-        uniqueWriter.writeHeader(vcHeader);
-        dupsWriter.writeHeader(vcHeader);
 
         long written = 0;
         System.out.println("processing...");
         while (iter.hasNext()) {
             VariantContext vc = iter.next();
             allWriter.add(vc);
-            if (vc.getFilters().contains(MarkDuplicates.DUPLICATE_FILTER)) {
-                dupsWriter.add(vc);
-            }else{
-                uniqueWriter.add(vc);
-            }
             if (++written % 100000 == 0) {
                 System.out.println("Written " + written + " records.");
             }
@@ -180,8 +162,6 @@ public class ISG2 extends CommandLineProgram {
         
         //close writers
         allWriter.close();
-        uniqueWriter.close();
-        dupsWriter.close();
     }
 
     /**

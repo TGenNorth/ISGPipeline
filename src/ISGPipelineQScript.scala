@@ -176,7 +176,8 @@ class ISGPipelineQScript extends QScript {
     callSnpsAndCalculateCoverageOnFastas
     
     if(!VCF_FILES.isEmpty){
-      add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile, refDups))
+      add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile))
+      add(new FilterDups(refDups))
       add(new CalculateStats())
     }
     
@@ -442,12 +443,10 @@ class ISGPipelineQScript extends QScript {
     override def commandLine = super.commandLine + required("R=" + ref)
   }
   
-  class ISG(@Input input: Seq[File], @Input covFiles: Seq[File], @Input ref: File, @Input dups: File) extends JavaCommandLineFunction {
+  class ISG(@Input input: Seq[File], @Input covFiles: Seq[File], @Input ref: File) extends JavaCommandLineFunction {
     analysisName = "isg"
     javaMainClass = "isg.ISG2"
     @Output val allOut: File = new File(outDir, "all.variants.txt")
-    @Output val uniqueOut: File = new File(outDir, "unique.variants.txt")
-    @Output val dupsOut: File = new File(outDir, "dups.variants.txt")
     var samples: List[String] = Nil
 
     override def freezeFieldValues() {
@@ -463,7 +462,6 @@ class ISGPipelineQScript extends QScript {
       required("REF="+ref) +
       required("VCF_DIR="+vcfDir) +
       required("COV_DIR="+covDir) +
-      required("DUPS_FILE="+dups) +
       optional("PLOIDY="+ploidy) +
       optional("MIN_AF="+minAF) +
       optional("MIN_QUAL="+minQual) +
@@ -472,11 +470,24 @@ class ISGPipelineQScript extends QScript {
       optional("INDEL="+includeIndels)
   }
   
+  class FilterDups(@Input inFilter: File) extends JavaCommandLineFunction {
+    analysisName = "filterMatrix"
+    javaMainClass = "isg.tools.FilterMatrix"
+    @Input val inMatrix: File = new File(outDir, "all.variants.txt")
+    @Output val uniqueOut: File = new File(outDir, "unique.variants.txt")
+    @Output val dupsOut: File = new File(outDir, "dups.variants.txt")
+    
+    override def commandLine = super.commandLine + required("INPUT="+inMatrix) + 
+      required("FILTER="+inFilter) + required("INCLUSIVE_OUT="+dupsOut) + 
+      required("EXCLUSIVE_OUT="+uniqueOut) + required("REFERENCE_SEQUENCE="+referenceFile)
+  }
+  
   class CalculateStats() extends JavaCommandLineFunction {
     analysisName = "calculateStatistics"
     javaMainClass = "isg.tools.CalculateStatistics"
     @Input val in: File = new File(outDir, "all.variants.txt")
     @Output val out: File = new File(outDir, "all.variants.stats")
+    
     override def commandLine = super.commandLine + required("-I", in) + required("-O", out)
   }
   
