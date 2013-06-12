@@ -6,10 +6,11 @@ package isg.tools;
 
 import isg.matrix.VariantContextTabReader;
 import java.io.File;
-import org.broadinstitute.sting.commandline.CommandLineProgram;
-import org.broadinstitute.sting.commandline.Input;
-import org.broadinstitute.sting.commandline.Output;
-import org.broadinstitute.sting.utils.help.ApplicationDetails;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import net.sf.picard.cmdline.CommandLineProgram;
+import net.sf.picard.cmdline.Option;
+import net.sf.picard.cmdline.Usage;
 import org.broadinstitute.variant.variantcontext.VariantContext;
 
 /**
@@ -18,40 +19,31 @@ import org.broadinstitute.variant.variantcontext.VariantContext;
  */
 public class CalculateStatistics extends CommandLineProgram {
 
-    @Input(fullName = "input_file", shortName = "I", doc = "ISG Matrix file", required = true)
-    public File input;
-
-    @Output(fullName = "output_file", shortName = "O", doc = "Statistics file", required = true)
-    public File output;// = new File("test/simple_out.stats.tab");
-
-    public static void main(String[] args) {
-        try {
-            CalculateStatistics instance = new CalculateStatistics();
-            start(instance, args);
-            System.exit(CommandLineProgram.result); // todo -- this is a painful hack
-        } catch (Throwable t) {
-            exitSystemWithError(t);
-        }
-    }
+    @Usage(programVersion = "0.1")
+    public String USAGE = "Calculate statistics on an ISG Matrix.";
+    @Option(doc = "ISG Matrix file", optional = false)
+    public File INPUT;// = new File("test/simple.tab");
+    @Option(doc = "Output statistics file", optional = false)
+    public File OUTPUT;// = new File("test/simple_out.stats.tab");
 
     @Override
-    protected int execute() throws Exception {
-        
-        final VariantContextTabReader reader = new VariantContextTabReader(input);
-        final ISGMatrixStats stats = new ISGMatrixStats(reader.getHeader().getGenotypeNames());
-        VariantContext record = null;
-        while ((record = reader.nextRecord()) != null) {
-            stats.add(record);
+    protected int doWork() {
+        try {
+            VariantContextTabReader reader = new VariantContextTabReader(INPUT);
+            ISGMatrixStats stats = new ISGMatrixStats(reader.getHeader().getAttributeKeys());
+            VariantContext record = null;
+            while( (record = reader.nextRecord()) != null ){
+                stats.add(record);
+            }
+            stats.writeToFile(OUTPUT);
+        } catch (Exception ex) {
+            Logger.getLogger(CalculateStatistics.class.getName()).log(Level.SEVERE, null, ex);
+            return 1;
         }
-        stats.writeToFile(output);
-        
         return 0;
     }
-
-    @Override
-    protected ApplicationDetails getApplicationDetails() {
-        return super.getApplicationDetails();
+    
+    public static void main(String[] args) {
+        System.exit(new CalculateStatistics().instanceMain(args));
     }
-    
-    
 }

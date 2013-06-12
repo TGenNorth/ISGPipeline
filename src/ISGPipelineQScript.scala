@@ -177,8 +177,8 @@ class ISGPipelineQScript extends QScript {
     
     if(!VCF_FILES.isEmpty){
       add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile))
+      add(new BatchRunner())
       add(new FilterDups(refDups))
-      add(new CalculateStats())
     }
     
   }
@@ -473,13 +473,22 @@ class ISGPipelineQScript extends QScript {
   class FilterDups(@Input inFilter: File) extends JavaCommandLineFunction {
     analysisName = "filterMatrix"
     javaMainClass = "isg.tools.FilterMatrix"
-    @Input val inMatrix: File = new File(outDir, "all.variants.txt")
+    @Input val inMatrix: File = new File(outDir, "all.variants.final.txt")
     @Output val uniqueOut: File = new File(outDir, "unique.variants.txt")
     @Output val dupsOut: File = new File(outDir, "dups.variants.txt")
     
     override def commandLine = super.commandLine + required("INPUT="+inMatrix) + 
       required("FILTER="+inFilter) + required("INCLUSIVE_OUT="+dupsOut) + 
       required("EXCLUSIVE_OUT="+uniqueOut) + required("REFERENCE_SEQUENCE="+referenceFile)
+  }
+  
+  class BatchRunner() extends JavaCommandLineFunction {
+    analysisName = "isgToolsBatchRunner"
+    javaMainClass = "isg.tools.ISGToolsBatchRunner"
+    @Input val in: File = new File(outDir, "all.variants.txt")
+    @Output val out: File = new File(outDir, "all.variants.final.txt")
+    
+    override def commandLine = super.commandLine + required("INPUT="+in) + required("OUTPUT="+out)
   }
   
   class CalculateStats() extends JavaCommandLineFunction {
