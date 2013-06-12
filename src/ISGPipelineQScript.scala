@@ -415,7 +415,7 @@ class ISGPipelineQScript extends QScript {
   }
   
   class UG(bam: File, ref: File, outVCF: File) extends UnifiedGenotyperCommandLineFunction with UNIVERSAL_GATK_ARGS {
-    @Input val dict: File = swapExt(referenceFile.getParent, referenceFile, ".fasta", ".dict")
+    @Input val dict: File = swapExt(ref.getParent, ref, ".fasta", ".dict")
     this.inputFile = bam
     this.referenceFile = ref
     this.out = outVCF
@@ -425,7 +425,7 @@ class ISGPipelineQScript extends QScript {
   }
   
   class CallableLoci(bam: File, ref: File, outBED: File) extends CallableLociCommandLineFunction with UNIVERSAL_GATK_ARGS {
-    @Input val dict: File = swapExt(referenceFile.getParent, referenceFile, ".fasta", ".dict")
+    @Input val dict: File = swapExt(ref.getParent, ref, ".fasta", ".dict")
     this.inputFile = bam
     this.referenceFile = ref
     this.out = outBED
