@@ -176,9 +176,12 @@ class ISGPipelineQScript extends QScript {
     callSnpsAndCalculateCoverageOnFastas
     
     if(!VCF_FILES.isEmpty){
+      val all = new File(outDir, "all.variants.txt");
+      val allFinal = new File(outDir, "all.variants.final.txt");
+      
       add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile))
-      add(new BatchRunner())
-      add(new FilterDups(refDups))
+      add(new BatchRunner(all, allFinal))
+      add(new FilterDups(allFinal, refDups))
     }
     
   }
@@ -470,10 +473,9 @@ class ISGPipelineQScript extends QScript {
       optional("INDEL="+includeIndels)
   }
   
-  class FilterDups(@Input inFilter: File) extends JavaCommandLineFunction {
+  class FilterDups(@Input inMatrix: File, @Input inFilter: File) extends JavaCommandLineFunction {
     analysisName = "filterMatrix"
     javaMainClass = "isg.tools.FilterMatrix"
-    @Input val inMatrix: File = new File(outDir, "all.variants.final.txt")
     @Output val uniqueOut: File = new File(outDir, "unique.variants.txt")
     @Output val dupsOut: File = new File(outDir, "dups.variants.txt")
     
@@ -482,22 +484,12 @@ class ISGPipelineQScript extends QScript {
       required("EXCLUSIVE_OUT="+uniqueOut) + required("REFERENCE_SEQUENCE="+referenceFile)
   }
   
-  class BatchRunner() extends JavaCommandLineFunction {
+  class BatchRunner(@Input in: File, @Output out: File) extends JavaCommandLineFunction {
     analysisName = "isgToolsBatchRunner"
     javaMainClass = "isg.tools.ISGToolsBatchRunner"
-    @Input val in: File = new File(outDir, "all.variants.txt")
-    @Output val out: File = new File(outDir, "all.variants.final.txt")
     
-    override def commandLine = super.commandLine + required("INPUT="+in) + required("OUTPUT="+out)
-  }
-  
-  class CalculateStats() extends JavaCommandLineFunction {
-    analysisName = "calculateStatistics"
-    javaMainClass = "isg.tools.CalculateStatistics"
-    @Input val in: File = new File(outDir, "all.variants.txt")
-    @Output val out: File = new File(outDir, "all.variants.stats")
-    
-    override def commandLine = super.commandLine + required("-I", in) + required("-O", out)
+    override def commandLine = super.commandLine + required("INPUT="+in) + required("OUTPUT="+out) +
+      required("REFERENCE_SEQUENCE="+referenceFile) + required("GBK_DIR="+gbkDir)
   }
   
 }

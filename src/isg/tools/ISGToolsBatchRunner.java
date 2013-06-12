@@ -31,7 +31,7 @@ public class ISGToolsBatchRunner extends CommandLineProgram {
         CalculateMismatch {
 
             @Override
-            public CommandLineProgram makeInstance(final File input, final File output) {
+            public CommandLineProgram makeInstance(final File input, final File output, final File ref, final File gbkDir) {
                 final CalculateMismatch program = new CalculateMismatch();
                 program.INPUT = input;
                 program.OUTPUT = output;
@@ -41,7 +41,7 @@ public class ISGToolsBatchRunner extends CommandLineProgram {
         DetermineStatus {
 
             @Override
-            public CommandLineProgram makeInstance(final File input, final File output) {
+            public CommandLineProgram makeInstance(final File input, final File output, final File ref, final File gbkDir) {
                 final DetermineStatus program = new DetermineStatus();
                 program.INPUT = input;
                 program.OUTPUT = output;
@@ -51,15 +51,27 @@ public class ISGToolsBatchRunner extends CommandLineProgram {
         CalculatePattern {
 
             @Override
-            public CommandLineProgram makeInstance(final File input, final File output) {
+            public CommandLineProgram makeInstance(final File input, final File output, final File ref, final File gbkDir) {
                 final CalculatePattern program = new CalculatePattern();
                 program.INPUT = input;
                 program.OUTPUT = output;
                 return program;
             }
+        },
+        ClassifyMatrix {
+
+            @Override
+            public CommandLineProgram makeInstance(final File input, final File output, final File ref, final File gbkDir) {
+                final ClassifyMatrix program = new ClassifyMatrix();
+                program.INPUT = input;
+                program.OUTPUT = output;
+                program.REF = ref;
+                program.GBK_DIR = gbkDir;
+                return program;
+            }
         };
 
-        public abstract CommandLineProgram makeInstance(final File input, final File output);
+        public abstract CommandLineProgram makeInstance(final File input, final File output, final File ref, final File gbkDir);
     }
     @Usage
     public final String USAGE = "Takes an input matrix file and runs one or more ISGTools "
@@ -68,6 +80,10 @@ public class ISGToolsBatchRunner extends CommandLineProgram {
     public File INPUT;
     @Option(shortName = StandardOptionDefinitions.OUTPUT_SHORT_NAME, doc = "Output matrix file.")
     public File OUTPUT;
+    @Option(shortName = StandardOptionDefinitions.REFERENCE_SHORT_NAME, doc = "Reference fasta file.")
+    public File REFERENCE_SEQUENCE;
+    @Option(doc = "Directory of genbank files.", optional=true)
+    public File GBK_DIR;
     @Option
     public List<Program> PROGRAM = CollectionUtil.makeList(Program.values());
 
@@ -83,9 +99,12 @@ public class ISGToolsBatchRunner extends CommandLineProgram {
         File output = new File(UUID.randomUUID().toString());
         int count = 0;
         Set<Program> programs = new HashSet<Program>(PROGRAM);
+        if(GBK_DIR==null || GBK_DIR.list().length==0){
+            programs.remove(Program.ClassifyMatrix);
+        }
         for (Program program : programs) {
             count++;
-            final CommandLineProgram instance = program.makeInstance(input, output);
+            final CommandLineProgram instance = program.makeInstance(input, output, REFERENCE_SEQUENCE, GBK_DIR);
 
             //use reflection to access protected doWork method
             invokeDoWork(instance);
