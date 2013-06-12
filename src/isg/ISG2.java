@@ -45,8 +45,8 @@ public class ISG2 extends CommandLineProgram {
     public String USAGE = "";
     @Option(doc = "Name of sample to include in analysis.", optional = false)
     public List<String> SAMPLE;
-    @Option(doc = "Output matrix file.", optional = false)
-    public File OUTPUT;
+    @Option(doc = "Output directory.", optional = false)
+    public File OUT_DIR;
     @Option(doc = "Directory containing vcf files.", optional = false)
     public File VCF_DIR;
     @Option(doc = "Directory containing alignment coverage files.", optional = false)
@@ -67,6 +67,9 @@ public class ISG2 extends CommandLineProgram {
     public int MIN_DP = 3;
     @Option(doc = "Process indels.", optional = false)
     public boolean INDEL = false;
+    public static final String ALL_VARIANTS_FILENAME = "all.variants.txt";
+    public static final String UNIQUE_VARIANTS_FILENAME = "unique.variants.txt";
+    public static final String DUPS_VARIANTS_FILENAME = "dups.variants.txt";
     private SAMSequenceDictionary dict;
     private static final String AMBIGUOUS_CALL_STRING = "N";
     private static final Allele AMBIGUOUS_CALL = Allele.create(AMBIGUOUS_CALL_STRING);
@@ -150,22 +153,35 @@ public class ISG2 extends CommandLineProgram {
     }
 
     private void writeToFile(Iterator<VariantContext> iter) {
-        VariantContextTabHeader vcHeader = new VariantContextTabHeader(Collections.EMPTY_LIST, new HashSet<String>(SAMPLE));
-        VariantContextTabWriter vcWriter = openFileForWriting(OUTPUT);
-        vcWriter.writeHeader(vcHeader);
+        final VariantContextTabHeader vcHeader = new VariantContextTabHeader(Collections.EMPTY_LIST, new HashSet<String>(SAMPLE));
+        final VariantContextTabWriter allWriter = openFileForWriting(new File(OUT_DIR, ALL_VARIANTS_FILENAME));
+        final VariantContextTabWriter uniqueWriter = openFileForWriting(new File(OUT_DIR, UNIQUE_VARIANTS_FILENAME));
+        final VariantContextTabWriter dupsWriter = openFileForWriting(new File(OUT_DIR, DUPS_VARIANTS_FILENAME));
+
+        //write header
+        allWriter.writeHeader(vcHeader);
+        uniqueWriter.writeHeader(vcHeader);
+        dupsWriter.writeHeader(vcHeader);
+
         long written = 0;
         System.out.println("processing...");
         while (iter.hasNext()) {
             VariantContext vc = iter.next();
-            if (!vc.getFilters().contains(MarkDuplicates.DUPLICATE_FILTER)) {
-                vcWriter.add(vc);
-                if (++written % 100000 == 0) {
-                    System.out.println("Written " + written + " records.");
-                }
+            allWriter.add(vc);
+            if (vc.getFilters().contains(MarkDuplicates.DUPLICATE_FILTER)) {
+                dupsWriter.add(vc);
+            }else{
+                uniqueWriter.add(vc);
             }
-
+            if (++written % 100000 == 0) {
+                System.out.println("Written " + written + " records.");
+            }
         }
-        vcWriter.close();
+        
+        //close writers
+        allWriter.close();
+        uniqueWriter.close();
+        dupsWriter.close();
     }
 
     /**

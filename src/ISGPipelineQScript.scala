@@ -114,6 +114,7 @@ class ISGPipelineQScript extends QScript {
     outDir = mkdir(new File(isgRoot, "out"))
     gbkDir = mkdir(new File(isgRoot, "genBank"))
     dupsDir = mkdir(new File(isgRoot, "dups"))
+    refDups = swapExt(dupsDir, referenceFile, ".fasta", ".interval_list")
     
     //add bams
     for(bam : File <- bamsDir.listFiles){
@@ -130,15 +131,17 @@ class ISGPipelineQScript extends QScript {
       if(fasta.getName.endsWith(".fasta")) addFasta(fasta)
     }
     
-    val matrix = new File(outDir, ".isg_out.tab.done")
-    if(matrix.exists){
-      matrix.delete
+    //remove *.done files from outDir
+    for(outFile : File <- outDir.listFiles){
+      if(outFile.getName.endsWith(".done")) outFile.delete
     }
     
+    //load options file if specified
     if(optionsFile!=null){
       typedProperties.loadFromFile(optionsFile)
     }
     
+    //create index and dictionary for reference file if exists
     if(referenceFile.exists){
       add(new CreateDict(referenceFile))
       add(new CreateFAI(referenceFile))
@@ -173,8 +176,7 @@ class ISGPipelineQScript extends QScript {
     callSnpsAndCalculateCoverageOnFastas
     
     if(!VCF_FILES.isEmpty){
-      val matrix = new File(outDir, "isg_out.tab")
-      add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile, refDups, matrix))
+      add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile, refDups))
     }
     
   }
@@ -185,7 +187,6 @@ class ISGPipelineQScript extends QScript {
     val ref = stripExtension(referenceFile)
     val prefix = mummerDir.getPath + "/" + ref + "_" + ref
     val coords = new File(mummerDir, ref + "_" + ref + ".coords")
-    refDups = new File(dupsDir, ref + ".interval_list")
     
     add(new Nucmer(referenceFile, referenceFile, prefix, true, true))
     add(new CoordsDup(coords, referenceFile, refDups))
@@ -440,9 +441,12 @@ class ISGPipelineQScript extends QScript {
     override def commandLine = super.commandLine + required("R=" + ref)
   }
   
-  class ISG(@Input input: Seq[File], @Input covFiles: Seq[File], @Input ref: File, @Input dups: File, @Output out: File) extends JavaCommandLineFunction {
+  class ISG(@Input input: Seq[File], @Input covFiles: Seq[File], @Input ref: File, @Input dups: File) extends JavaCommandLineFunction {
     analysisName = "isg"
     javaMainClass = "isg.ISG2"
+    @Output val allOut: File = new File(outDir, "all.variants.txt")
+    @Output val uniqueOut: File = new File(outDir, "unique.variants.txt")
+    @Output val dupsOut: File = new File(outDir, "dups.variants.txt")
     var samples: List[String] = Nil
 
     override def freezeFieldValues() {
@@ -454,7 +458,7 @@ class ISGPipelineQScript extends QScript {
     
     override def commandLine = super.commandLine + 
       repeat("SAMPLE=", samples, spaceSeparated=false) +
-      required("OUTPUT="+out) +
+      required("OUT_DIR="+outDir) +
       required("REF="+ref) +
       required("VCF_DIR="+vcfDir) +
       required("COV_DIR="+covDir) +
