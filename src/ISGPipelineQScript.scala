@@ -177,6 +177,7 @@ class ISGPipelineQScript extends QScript {
     
     if(!VCF_FILES.isEmpty){
       add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile, refDups))
+      add(new CalculateStats())
     }
     
   }
@@ -469,6 +470,14 @@ class ISGPipelineQScript extends QScript {
       optional("MIN_GQ="+minGQ) +
       optional("MIN_DP="+minDP) +
       optional("INDEL="+includeIndels)
+  }
+  
+  class CalculateStats() extends JavaCommandLineFunction {
+    analysisName = "calculateStatistics"
+    javaMainClass = "isg.tools.CalculateStatistics"
+    @Input val in: File = new File(outDir, "all.variants.txt")
+    @Output val out: File = new File(outDir, "all.variants.stats")
+    override def commandLine = super.commandLine + required("-I", in) + required("-O", out)
   }
   
 }
