@@ -38,9 +38,14 @@ public class LociStateCallerFactory {
         final OverlapDetector<CalledState> overlapDetector = new OverlapDetector<CalledState>(0, 0);
         final AbstractFeatureReader<BEDFeature> reader = AbstractFeatureReader.getFeatureReader(f.getAbsolutePath(), new BEDCodec(), false);
         final CloseableTribbleIterator<BEDFeature> iter = reader.iterator();
+        int error = -1;
         while(iter.hasNext()){
             final BEDFeature bed = iter.next();
-            final Interval interval = new Interval(bed.getChr(), bed.getStart()-1, bed.getEnd());
+            if(error==-1){
+                //fix for 1-based bed files produced by old versions of GATK
+                error = bed.getStart()==2 ? 1 : 0;
+            }
+            final Interval interval = new Interval(bed.getChr(), bed.getStart()-error, bed.getEnd());
             final CalledState calledState = CalledState.valueOf(bed.getName());
             overlapDetector.addLhs(calledState, interval);
         }
