@@ -4,16 +4,23 @@
  */
 package isg.tools;
 
+import isg.matrix.HeaderAttribute;
+import isg.matrix.HeaderSampleAttribute;
 import isg.matrix.VariantContextTabHeader;
 import isg.matrix.VariantContextTabReader;
 import isg.matrix.VariantContextTabWriter;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import net.sf.picard.PicardException;
 import net.sf.picard.cmdline.CommandLineProgram;
 import net.sf.picard.cmdline.Option;
 import net.sf.picard.cmdline.Usage;
 import net.sf.picard.io.IoUtil;
+import org.broadinstitute.variant.variantcontext.Genotype;
+import org.broadinstitute.variant.variantcontext.GenotypeBuilder;
+import org.broadinstitute.variant.variantcontext.GenotypesContext;
 import org.broadinstitute.variant.variantcontext.VariantContext;
 import org.broadinstitute.variant.variantcontext.VariantContextBuilder;
 
@@ -30,7 +37,6 @@ public class CalculatePattern extends CommandLineProgram {
     @Option(doc = "Output matrix file", optional = false)
     public File OUTPUT;// = new File("test/simple.removed.annotated.tab");
 
-    private static final String PAT_FORMAT = "%s:pat";
     /**
      * @param args the command line arguments
      */
@@ -46,30 +52,28 @@ public class CalculatePattern extends CommandLineProgram {
         VariantContextTabReader reader = openMatrixForReading(INPUT);
         VariantContextTabWriter writer = openMatrixForWriting(OUTPUT);
         
-
         VariantContextTabHeader header = reader.getHeader();
-        header = header.addAttribute(String.format(PAT_FORMAT, VariantContextTabHeader.REF));
         for(String sample: header.getGenotypeNames()){
-            String attr = String.format(PAT_FORMAT, sample);
-            header = header.addAttribute(attr);
+            header = header.addAttribute(HeaderSampleAttribute.createPatternAttribute(sample));
         }
-        header = header.addAttribute(VariantContextTabHeader.PATTERN_NUM);
+        header = header.addAttribute(HeaderAttribute.PAT_NUM);
         
         writer.writeHeader(header);
 
         final PatternNumGenerator patNumGen = new PatternNumGenerator(header.getGenotypeNames());
         VariantContext record = null;
         while ((record = reader.nextRecord()) != null) {
-
             VariantContextBuilder vcb = new VariantContextBuilder(record);
             Map<String, String> pattern = PatternBuilder.generatePattern(record, header.getGenotypeNames());
             int patNum = patNumGen.getPatternNum(pattern);
             
-            vcb.attribute(String.format(PAT_FORMAT, VariantContextTabHeader.REF), pattern.get(VariantContextTabHeader.REF));
-            for(String sample: header.getGenotypeNames()){
-                vcb.attribute(String.format(PAT_FORMAT, sample), pattern.get(sample));
+            GenotypesContext gcntxt = record.getGenotypes();
+            List<Genotype> genotypes = new ArrayList<Genotype>();
+            for(Genotype g: gcntxt){
+                genotypes.add(new GenotypeBuilder(g).attribute(HeaderAttribute.PATTERN_STR, pattern.get(g.getSampleName())).make());
             }
-            vcb.attribute(VariantContextTabHeader.PATTERN_NUM, patNum);
+            vcb.genotypes(genotypes);
+            vcb.attribute(HeaderAttribute.PAT_NUM_STR, patNum);
             
             writer.add(vcb.make());
         }

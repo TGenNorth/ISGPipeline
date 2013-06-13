@@ -4,6 +4,7 @@
  */
 package isg.tools;
 
+import isg.matrix.HeaderAttribute;
 import isg.matrix.VariantContextTabHeader;
 import isg.matrix.VariantContextTabReader;
 import isg.matrix.VariantContextTabWriter;
@@ -38,7 +39,7 @@ public class CalculateMismatch extends CommandLineProgram {
         VariantContextTabWriter writer = openMatrixForWriting(OUTPUT);
 
         VariantContextTabHeader header = reader.getHeader();
-        header = header.addAttribute("mismatch");
+        header = header.addAttribute(HeaderAttribute.MISMATCH);
         writer.writeHeader(header);
 
         VariantContext cur = null;
@@ -53,11 +54,11 @@ public class CalculateMismatch extends CommandLineProgram {
 
             VariantContextBuilder vcb = new VariantContextBuilder(last);
             if (m1 == -1) { //beginning of file
-                vcb.attribute("mismatch", m2);
+                vcb.attribute(HeaderAttribute.MISMATCH.getName(), m2);
             } else if (m2 == -1) { //beginning of chr
-                vcb.attribute("mismatch", m1);
+                vcb.attribute(HeaderAttribute.MISMATCH.getName(), m1);
             } else {
-                vcb.attribute("mismatch", (m1 < m2) ? m1 : m2);
+                vcb.attribute(HeaderAttribute.MISMATCH.getName(), (m1 < m2) ? m1 : m2);
             }
             writer.add(vcb.make());
 
@@ -66,23 +67,11 @@ public class CalculateMismatch extends CommandLineProgram {
         }
 
         VariantContextBuilder vcb = new VariantContextBuilder(last);
-        vcb.attribute("mismatch", m1);
+        vcb.attribute(HeaderAttribute.MISMATCH.getName(), m1);
         writer.add(vcb.make());
         writer.close();
 
         return 0;
-    }
-
-    public VariantContext annotateMismatch(int m1, int m2, VariantContext vc) {
-        VariantContextBuilder vcb = new VariantContextBuilder(vc);
-        if (m1 == -1) { //beginning of file
-            vcb.attribute("mismatch", m2);
-        } else if (m2 == -1) { //beginning of chr
-            vcb.attribute("mismatch", m2);
-        } else {
-            vcb.attribute("mismatch", (m1 < m2) ? m1 : m2);
-        }
-        return vcb.make();
     }
 
     public VariantContextTabReader openMatrixForReading(File file) {

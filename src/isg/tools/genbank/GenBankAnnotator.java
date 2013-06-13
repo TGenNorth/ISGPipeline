@@ -1,5 +1,6 @@
 package isg.tools.genbank;
 
+import isg.matrix.HeaderAttributeImpl;
 import isg.matrix.VariantContextTabHeader;
 import java.io.*;
 import java.util.*;
@@ -53,7 +54,7 @@ public class GenBankAnnotator {
     
     public VariantContextTabHeader annotate(VariantContextTabHeader header){
         for(final GbkAttr attrName: GbkAttr.values()){
-            header = header.addAttribute(attrName.name());
+            header = header.addAttribute(new HeaderAttributeImpl(attrName.name()));
         }
         return header;
     }

@@ -19,27 +19,25 @@ public class VariantContextTabHeader {
     
     public static final String CHROM = "Chrom";
     public static final String POS = "Pos";
-    public static final String REF = "Ref";
-    public static final String PATTERN = "Pattern";
-    public static final String PATTERN_NUM = "PatternNum"; 
+    public static final String REF = "Ref"; 
     public static final String NUM_SAMPLES = "numSamples";
     
-    private Set<String> attributeKeys = new LinkedHashSet<String>();
+    private Set<HeaderAttribute> attributeKeys = new LinkedHashSet<HeaderAttribute>();
     private Set<String> genotypes = new LinkedHashSet<String>();
     
     public VariantContextTabHeader(){}
     
-    public VariantContextTabHeader(List<String> attributeKeys, List<String> genotypeNames){
+    public VariantContextTabHeader(List<HeaderAttribute> attributeKeys, List<String> genotypeNames){
         this.attributeKeys.addAll(attributeKeys);
         this.genotypes.addAll(genotypeNames);
     }
     
-    public VariantContextTabHeader(List<String> attributeKeys, Set<String> genotypeNames){
+    public VariantContextTabHeader(List<HeaderAttribute> attributeKeys, Set<String> genotypeNames){
         this.attributeKeys.addAll(attributeKeys);
         this.genotypes.addAll(genotypeNames);
     }
 
-    public Set<String> getAttributeKeys() {
+    public Set<HeaderAttribute> getAttributeKeys() {
         return Collections.unmodifiableSet(attributeKeys);
     }
 
@@ -51,27 +49,27 @@ public class VariantContextTabHeader {
         return genotypes.size();
     }
     
-    public VariantContextTabHeader addAttribute(final String attr){
-        List<String> attributes = new ArrayList<String>(attributeKeys);
+    public VariantContextTabHeader addAttribute(final HeaderAttribute attr){
+        List<HeaderAttribute> attributes = new ArrayList<HeaderAttribute>(attributeKeys);
         attributes.add(attr);
         return new VariantContextTabHeader(attributes, genotypes);
     }
 
     public VariantContextTabHeader removeSamples(Collection<String> samplesToRemove) {
         List<String> genotypes = new ArrayList<String>(this.genotypes);
-        List<String> attributes = new ArrayList<String>(attributeKeys);
+        List<HeaderAttribute> attributes = new ArrayList<HeaderAttribute>(attributeKeys);
         genotypes.removeAll(samplesToRemove);
         for(String sample: samplesToRemove){
-            attributes.removeAll(findAllStartsWith(attributes, sample));
+            attributes.removeAll(findAttributesForSample(attributes, sample));
         }
         return new VariantContextTabHeader(attributes, genotypes); 
     }
     
-    private List<String> findAllStartsWith(List<String> aList, String prefix){
-        List<String> ret = new ArrayList<String>();
-        for(String str: aList){
-            if(str.startsWith(prefix)){
-                ret.add(str);
+    private List<HeaderAttribute> findAttributesForSample(List<HeaderAttribute> aList, String sampleName){
+        List<HeaderAttribute> ret = new ArrayList<HeaderAttribute>();
+        for(HeaderAttribute attr: aList){
+            if(attr instanceof HeaderSampleAttribute && ((HeaderSampleAttribute)attr).getSampleName().equals(sampleName)){
+                ret.add(attr);
             }
         }
         return ret;

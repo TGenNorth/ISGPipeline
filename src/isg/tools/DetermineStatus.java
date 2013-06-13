@@ -4,6 +4,7 @@
  */
 package isg.tools;
 
+import isg.matrix.HeaderAttribute;
 import isg.matrix.VariantContextTabHeader;
 import isg.matrix.VariantContextTabReader;
 import isg.matrix.VariantContextTabWriter;
@@ -54,7 +55,7 @@ public class DetermineStatus extends CommandLineProgram {
         
 
         VariantContextTabHeader header = reader.getHeader();
-        header = header.addAttribute("status");
+        header = header.addAttribute(HeaderAttribute.STATUS);
         
         writer.writeHeader(header);
 
@@ -78,7 +79,7 @@ public class DetermineStatus extends CommandLineProgram {
             }
             
             VariantContextBuilder vcb = new VariantContextBuilder(record);
-            vcb.attribute("status", CollectionUtil.join(snpStatus, ","));
+            vcb.attribute(HeaderAttribute.STATUS.getName(), CollectionUtil.join(snpStatus, ","));
             
             writer.add(vcb.make());
         }

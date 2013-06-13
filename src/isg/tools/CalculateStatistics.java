@@ -30,7 +30,7 @@ public class CalculateStatistics extends CommandLineProgram {
     protected int doWork() {
         try {
             VariantContextTabReader reader = new VariantContextTabReader(INPUT);
-            ISGMatrixStats stats = new ISGMatrixStats(reader.getHeader().getAttributeKeys());
+            ISGMatrixStats stats = new ISGMatrixStats(reader.getHeader().getGenotypeNames());
             VariantContext record = null;
             while( (record = reader.nextRecord()) != null ){
                 stats.add(record);

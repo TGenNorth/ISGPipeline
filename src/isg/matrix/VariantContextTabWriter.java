@@ -39,7 +39,7 @@ public class VariantContextTabWriter {
             pw.print(n);
             pw.print("\t");
         }
-        for(String k: header.getAttributeKeys()){
+        for(HeaderAttribute k: header.getAttributeKeys()){
             pw.print(k);
             pw.print("\t");
         }
@@ -60,8 +60,8 @@ public class VariantContextTabWriter {
             pw.print("\t");
         }
         
-        for(String k: header.getAttributeKeys()){
-            Object obj = vc.getAttribute(k);
+        for(HeaderAttribute k: header.getAttributeKeys()){
+            Object obj = getAttribute(k, vc);
             if(obj!=null){
                 pw.print(obj.toString());
             }
@@ -72,6 +72,18 @@ public class VariantContextTabWriter {
     
     public void close(){
         pw.close();
+    }
+    
+    private Object getAttribute(HeaderAttribute attr, VariantContext vc){
+        if(attr instanceof HeaderSampleAttribute){
+            final String sampleName = ((HeaderSampleAttribute)attr).getSampleName();
+            Genotype g = vc.getGenotype(sampleName);
+            if(g==null){
+                throw new IllegalArgumentException("Could not find genotype for sample: "+sampleName);
+            }
+            return g.getAnyAttribute(attr.getName());
+        }
+        return vc.getAttribute(attr.getName());
     }
     
     private String getAllelesAsString(Genotype g){

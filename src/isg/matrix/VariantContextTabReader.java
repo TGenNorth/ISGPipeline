@@ -11,6 +11,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -52,27 +53,43 @@ public class VariantContextTabReader {
             }
             line = nextLine();
         }
+        if (numSamples == -1) {
+            throw new IllegalStateException(String.format("Malformed Header: '%s' field could not be found", VariantContextTabHeader.NUM_SAMPLES));
+        }
         final List<String> genotypes = new ArrayList<String>();
-        final List<String> attributes = new ArrayList<String>();
+        final List<HeaderAttribute> attributes = new ArrayList<HeaderAttribute>();
         String[] split = line.split("\t");
+        int i = 0;
+        assertFieldExists(VariantContextTabHeader.CHROM, split[i++]);
+        assertFieldExists(VariantContextTabHeader.POS, split[i++]);
+        assertFieldExists(VariantContextTabHeader.REF, split[i++]);
 
         //parse samples
-        int i = 3;
-        int lastSampleIndex = (numSamples == -1 ? split.length : numSamples + i);
+        int lastSampleIndex = numSamples + i;
         for (; i < lastSampleIndex; i++) {
-            if (split[i].equalsIgnoreCase(VariantContextTabHeader.PATTERN)) {
-                break;
-            }
             genotypes.add(split[i]);
         }
 
         //parse additional info
         for (; i < split.length; i++) {
             String attr = split[i];
-            attributes.add(attr);
+            attributes.add(parseHeaderAttribute(attr));
         }
-        
+
         return new VariantContextTabHeader(attributes, genotypes);
+    }
+
+    private void assertFieldExists(String expected, String actual) {
+        if (!expected.equals(actual)) {
+            throw new IllegalStateException(String.format("Malformed Header: '%s' field could not be found", expected));
+        }
+    }
+
+    private HeaderAttribute parseHeaderAttribute(String str) {
+        if (str.contains(":")) {
+            return new HeaderSampleAttribute(str);
+        }
+        return new HeaderAttributeImpl(str);
     }
 
     public String nextLine() {
@@ -91,66 +108,63 @@ public class VariantContextTabReader {
             return null;
         }
         VariantContextBuilder vcBldr = new VariantContextBuilder();
+        int index = 0;
         String[] split = line.split("\t");
-        String chr = split[0];
-        int pos = Integer.parseInt(split[1]);
-        Allele ref = Allele.create(split[2], true);
+        String chr = split[index++];
+        int pos = Integer.parseInt(split[index++]);
+        Allele ref = Allele.create(split[index++], true);
 
-        vcBldr.chr(chr).start(pos).stop(pos);
+        vcBldr.chr(chr).start(pos).stop(pos+chr.length()-1);
 
         Set<Allele> alleles = new HashSet<Allele>();
-        List<Genotype> genotypes = new ArrayList<Genotype>();
+        Map<String, GenotypeBuilder> genotypes = new HashMap<String, GenotypeBuilder>();
 
         alleles.add(ref);
 
         //parse samples
-        int index = 3;
         Set<String> samples = header.getGenotypeNames();
-        for (String sample: samples) {
+        for (String sample : samples) {
             Allele allele = Allele.create(split[index++]);
             if (ref.basesMatch(allele)) {
                 allele = ref;
             }
-            Genotype g = GenotypeBuilder.create(sample, Arrays.asList(allele));
+            GenotypeBuilder g = new GenotypeBuilder(sample, Arrays.asList(allele));
             if (!allele.isNoCall()) {
                 alleles.add(allele);
             }
-            
-            genotypes.add(g);
+
+            genotypes.put(sample, g);
         }
 
         //parse addtional info
         Map<String, Object> attributes = new HashMap<String, Object>();
-        for (String key : header.getAttributeKeys()) {
+        for (HeaderAttribute key : header.getAttributeKeys()) {
             if (index >= split.length) {
                 break;
             }
-//            System.out.printf("%d %d %s = %s\n", split.length, index, key, split[index]);
-            attributes.put(key, split[index++]);
+            if (key instanceof HeaderSampleAttribute) {
+                GenotypeBuilder g = genotypes.get(((HeaderSampleAttribute) key).getSampleName());
+                g.attribute(key.getName(), split[index++]);
+            } else {
+                attributes.put(key.getName(), split[index++]);
+            }
+
         }
         vcBldr.attributes(attributes);
         vcBldr.alleles(alleles);
-        vcBldr.genotypes(genotypes);
+        vcBldr.genotypes(buildGenotypes(genotypes.values()));
         return vcBldr.make();
+    }
+
+    private List<Genotype> buildGenotypes(Collection<GenotypeBuilder> gbs) {
+        final List<Genotype> ret = new ArrayList<Genotype>();
+        for (GenotypeBuilder gb : gbs) {
+            ret.add(gb.make());
+        }
+        return ret;
     }
 
     public VariantContextTabHeader getHeader() {
         return header;
-    }
-
-    public static void main(String[] args) throws FileNotFoundException, IOException {
-        VariantContextTabReader r = new VariantContextTabReader(
-                new File("test/test.tab"));
-//        VariantContextTabWriter w = new VariantContextTabWriter(
-//                new File("test/test.tab"));
-        VariantContext vc = null;
-//        w.writeHeader(r.getHeader());
-        while ((vc = r.nextRecord()) != null) {
-            if(!vc.isSNP()){
-                System.out.println(vc);
-            }
-//            w.add(vc);
-        }
-//        w.close();
     }
 }
