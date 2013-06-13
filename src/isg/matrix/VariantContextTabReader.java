@@ -114,7 +114,7 @@ public class VariantContextTabReader {
         int pos = Integer.parseInt(split[index++]);
         Allele ref = Allele.create(split[index++], true);
 
-        vcBldr.chr(chr).start(pos).stop(pos+chr.length()-1);
+        vcBldr.chr(chr).start(pos).stop(pos+ref.length()-1);
 
         Set<Allele> alleles = new HashSet<Allele>();
         Map<String, GenotypeBuilder> genotypes = new HashMap<String, GenotypeBuilder>();
