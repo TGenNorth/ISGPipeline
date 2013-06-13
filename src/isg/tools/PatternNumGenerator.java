@@ -38,13 +38,10 @@ public class PatternNumGenerator {
     }
     
     public int getPatternNum(String pattern){
-        Integer ret = patternNumMap.get(pattern);
-        if(ret==null){
-            count++;
-            ret = count;
-            patternNumMap.put(pattern, count);
+        if(!patternNumMap.containsKey(pattern)){
+            patternNumMap.put(pattern, ++count);
         }
-        return ret;
+        return patternNumMap.get(pattern);
     }
     
 }

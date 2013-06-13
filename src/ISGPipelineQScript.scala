@@ -61,7 +61,7 @@ class ISGPipelineQScript extends QScript {
   @Argument(doc="Do not fail when encountering base qualities that are too high "+
             "and that seemingly indicate a problem with the base quality encoding"+ 
             "of the BAM file", required=false)
-  var allowPotentiallyMisencodedQuals: Boolean = false
+  var allow_potentially_misencoded_quality_scores: Boolean = false
   
   @Argument(doc="Include indels in final output.", required=false)
   var includeIndels: Boolean = false
@@ -84,7 +84,7 @@ class ISGPipelineQScript extends QScript {
   
   trait UNIVERSAL_GATK_ARGS extends GATKCommandLineFunction {
     this.jarFile = gatkJarFile;
-    this.allowPotentiallyMisencodedQuals = allowPotentiallyMisencodedQuals;
+    this.allowPotentiallyMisencodedQuals = allow_potentially_misencoded_quality_scores;
   }
   
   var referenceFile: File = _
