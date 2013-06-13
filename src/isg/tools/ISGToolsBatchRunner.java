@@ -96,7 +96,7 @@ public class ISGToolsBatchRunner extends CommandLineProgram {
     protected int doWork() {
         
         File input = INPUT;
-        File output = new File(UUID.randomUUID().toString());
+        File output = createTempFile("isg");
         int count = 0;
         Set<Program> programs = new HashSet<Program>(PROGRAM);
         if(GBK_DIR==null || GBK_DIR.list().length==0){
@@ -142,7 +142,7 @@ public class ISGToolsBatchRunner extends CommandLineProgram {
     
     private File createTempFile(String prefix){
         try {
-            return File.createTempFile(prefix, null, OUTPUT.getParentFile());
+            return File.createTempFile(prefix, null);
         } catch (IOException ex) {
             throw new IllegalStateException("An error occured creating temp file", ex);
         }
