@@ -48,15 +48,4 @@ public class PatternBuilder {
         return pattern;
     }
     
-    public static void main(String[] args){
-        
-        PatternBuilder pb = new PatternBuilder();
-        pb.addAllele("A", Allele.NO_CALL);
-        pb.addAllele("B", Allele.create("A"));
-        pb.addAllele("C", Allele.create("A"));
-        pb.addAllele("D", Allele.create("T"));
-        pb.addAllele("E", Allele.create("A"));
-        
-        System.out.println(pb.build());
-    }
 }
