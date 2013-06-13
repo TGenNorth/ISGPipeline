@@ -35,7 +35,6 @@ public class LociStateCallerImpl implements LociStateCaller{
     private CalledState call(final Interval i){
         Collection<CalledState> overlaps = overlapDetector.getOverlaps(i);
         if(overlaps.isEmpty()){
-            System.out.println("Couldn't find overlap for: "+i);
             return assumedState;
         }else if(overlaps.size()==1){
             return overlaps.iterator().next();
