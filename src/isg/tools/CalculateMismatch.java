@@ -4,16 +4,19 @@
  */
 package isg.tools;
 
+import com.google.common.collect.AbstractIterator;
 import isg.matrix.HeaderAttribute;
 import isg.matrix.VariantContextTabHeader;
 import isg.matrix.VariantContextTabReader;
 import isg.matrix.VariantContextTabWriter;
 import java.io.File;
+import java.util.Iterator;
 import net.sf.picard.PicardException;
 import net.sf.picard.cmdline.CommandLineProgram;
 import net.sf.picard.cmdline.Option;
 import net.sf.picard.cmdline.Usage;
 import net.sf.picard.io.IoUtil;
+import net.sf.picard.util.PeekableIterator;
 import org.broadinstitute.variant.variantcontext.VariantContext;
 import org.broadinstitute.variant.variantcontext.VariantContextBuilder;
 
@@ -42,36 +45,26 @@ public class CalculateMismatch extends CommandLineProgram {
         header = header.addAttribute(HeaderAttribute.MISMATCH);
         writer.writeHeader(header);
 
-        VariantContext cur = null;
-        VariantContext last = reader.nextRecord();
-        int m1 = -1;
-        while ((cur = reader.nextRecord()) != null) {
-
-            int m2 = -1;
-            if (last.getChr().equals(cur.getChr())) {
-                m2 = Math.abs(cur.getStart() - last.getEnd());
-            }
-
-            VariantContextBuilder vcb = new VariantContextBuilder(last);
-            if (m1 == -1) { //beginning of file
-                vcb.attribute(HeaderAttribute.MISMATCH.getName(), m2);
-            } else if (m2 == -1) { //beginning of chr
-                vcb.attribute(HeaderAttribute.MISMATCH.getName(), m1);
-            } else {
-                vcb.attribute(HeaderAttribute.MISMATCH.getName(), (m1 < m2) ? m1 : m2);
-            }
-            writer.add(vcb.make());
-
-            last = cur;
-            m1 = m2;
+        Iterator<VariantContext> iter = new CalculateMismatchIterator(toIter(reader));
+        while(iter.hasNext()){
+            writer.add(iter.next());
         }
 
-        VariantContextBuilder vcb = new VariantContextBuilder(last);
-        vcb.attribute(HeaderAttribute.MISMATCH.getName(), m1);
-        writer.add(vcb.make());
         writer.close();
 
         return 0;
+    }
+    
+    private Iterator<VariantContext> toIter(final VariantContextTabReader reader){
+        return new AbstractIterator<VariantContext>(){
+
+            @Override
+            protected VariantContext computeNext() {
+                VariantContext ret = reader.nextRecord();
+                return (ret!=null) ? ret : endOfData();
+            }
+            
+        };
     }
 
     public VariantContextTabReader openMatrixForReading(File file) {
@@ -87,6 +80,48 @@ public class CalculateMismatch extends CommandLineProgram {
             return new VariantContextTabWriter(file);
         } catch (Exception ex) {
             throw new PicardException("Failed when opening file: " + file.getName(), ex);
+        }
+    }
+    
+    public static final class CalculateMismatchIterator extends AbstractIterator<VariantContext>{
+
+        private final PeekableIterator<VariantContext> iter;
+        private VariantContext last;
+        
+        public CalculateMismatchIterator(Iterator<VariantContext> iter){
+            this.iter = new PeekableIterator<VariantContext>(iter);
+        }
+
+        @Override
+        protected VariantContext computeNext() {
+            return iter.hasNext() ? annotateMismatch(iter.next()) : endOfData();
+        }
+        
+        private VariantContext annotateMismatch(VariantContext cur){
+            
+            VariantContext next = iter.peek();
+            
+            int m1 = calculateMismatch(last, cur);
+            int m2 = calculateMismatch(cur, next);
+            
+            VariantContextBuilder vcb = new VariantContextBuilder(cur);
+            if (m1 == -1) { //beginning of file
+                vcb.attribute(HeaderAttribute.MISMATCH.getName(), m2);
+            } else if (m2 == -1) { //beginning of chr
+                vcb.attribute(HeaderAttribute.MISMATCH.getName(), m1);
+            } else {
+                vcb.attribute(HeaderAttribute.MISMATCH.getName(), (m1 < m2) ? m1 : m2);
+            }
+            
+            last = cur;
+            return vcb.make();
+        }
+        
+        private int calculateMismatch(VariantContext first, VariantContext second){
+            if (first!=null && second!=null && first.getChr().equals(second.getChr())) {
+                return Math.abs(second.getStart() - first.getEnd());
+            }
+            return -1;
         }
     }
 
