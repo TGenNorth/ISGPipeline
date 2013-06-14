@@ -41,7 +41,7 @@ public class CoordsDupsInProcessFunction extends AbstractInProcessFunction {
         
         final ReferenceSequenceFile ref = ReferenceSequenceFileFactory
                 .getReferenceSequenceFile(referenceSequence);
-
+        
         final SAMFileHeader header = new SAMFileHeader();
         header.setSequenceDictionary(ref.getSequenceDictionary());
         final IntervalList intervalList = new IntervalList(header);
