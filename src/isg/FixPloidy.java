@@ -71,8 +71,11 @@ public class FixPloidy implements Algorithm<VariantContext, VariantContext> {
     public Set<Allele> getUniqueCallableAlleles(List<Genotype> genotypes){
         Set<Allele> alleles = new HashSet<Allele>();
         for(Genotype g: genotypes){
-            if(g.isNoCall()) continue;
-            alleles.addAll(g.getAlleles());
+            for(Allele a: g.getAlleles()){
+                if(a.isCalled()){
+                    alleles.add(a);
+                }
+            }
         }
         return alleles;
     }

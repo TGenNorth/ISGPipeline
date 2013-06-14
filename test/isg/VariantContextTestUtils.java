@@ -72,10 +72,15 @@ public class VariantContextTestUtils {
         if (!ignoreAttributes) {
             assertEquals(vc1.getAttributes(), vc2.getAttributes());
         }
-        for (final String sample: vc1.getSampleNames()) {
+        for (final String sample : vc1.getSampleNames()) {
             Genotype g1 = vc1.getGenotype(sample);
             Genotype g2 = vc2.getGenotype(sample);
+            assertNotNull(String.format("Could not find genotype '%s' in VariantContext", sample), g1);
+            assertNotNull(String.format("Could not find genotype '%s' in VariantContext", sample), g2);
             assertTrue(String.format("%s != %s", g1, g2), g1.sameGenotype(g2));
+            if (!ignoreAttributes) {
+                assertEquals(g1.getExtendedAttributes(), g2.getExtendedAttributes());
+            }
         }
     }
 }

@@ -1,0 +1,1 @@
+#numSamples=3					Chrom	Pos	Ref	S1	S2	S3chr1	1	A	T	T	Tchr1	10	C	G	C	Cchr1	15	T	A	.	Nchr2	1	G	T	T	G
