@@ -8,6 +8,7 @@ import isg.matrix.VariantContextTabReader;
 import isg.matrix.VariantContextTabWriter;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.sf.picard.cmdline.CommandLineProgram;
@@ -35,7 +36,7 @@ public class FilterMatrix extends CommandLineProgram {
     @Option(doc = "ISG Matrix file", optional = false)
     public File INPUT;
     @Option(doc = "Tabular file to filter by", optional = false)
-    public File FILTER;
+    public List<File> FILTER;
     @Option(doc = "File to write inclusive records", optional = false)
     public File INCLUSIVE_OUT;
     @Option(doc = "File to write exclusive records", optional = false)
@@ -76,7 +77,7 @@ public class FilterMatrix extends CommandLineProgram {
         } catch (Exception ex) {
             Logger.getLogger(FilterMatrix.class.getName()).log(Level.SEVERE, null, ex);
             return 1;
-        }finally{
+        } finally {
             includeWriter.close();
             excludeWriter.close();
         }
@@ -85,31 +86,33 @@ public class FilterMatrix extends CommandLineProgram {
 
     private OverlapDetector<Interval> createOverlapDetector() throws IOException {
         OverlapDetector<Interval> overlapDetector = new OverlapDetector<Interval>(0, 0);
-        CloseableTribbleIterator<TableFeature> iter = openTabularFileForReading().iterator();
-        TableFeature currentLocus = null;
-        while ((currentLocus = iter.next()) != null) {
-            Interval i = new Interval(currentLocus.getChr(), currentLocus.getStart(), currentLocus.getEnd());
-            overlapDetector.addLhs(i, i);
+        for (File f : FILTER) {
+            CloseableTribbleIterator<TableFeature> iter = openTabularFileForReading(f).iterator();
+            TableFeature currentLocus = null;
+            while ((currentLocus = iter.next()) != null) {
+                Interval i = new Interval(currentLocus.getChr(), currentLocus.getStart(), currentLocus.getEnd());
+                overlapDetector.addLhs(i, i);
+            }
+            iter.close();
         }
-        iter.close();
         return overlapDetector;
     }
-    
-    private VariantContextTabWriter openFileForWriting(File f){
+
+    private VariantContextTabWriter openFileForWriting(File f) {
         try {
             return new VariantContextTabWriter(f);
         } catch (IOException ex) {
-            throw new IllegalStateException("An error occured opening file: "+f, ex);
+            throw new IllegalStateException("An error occured opening file: " + f, ex);
         }
 
     }
 
-    private AbstractFeatureReader<TableFeature> openTabularFileForReading() {
+    private AbstractFeatureReader<TableFeature> openTabularFileForReading(File f) {
         ReferenceSequenceFile refSeqFile = ReferenceSequenceFileFactory.getReferenceSequenceFile(REFERENCE_SEQUENCE);
         GenomeLocParser genomeLocParser = new GenomeLocParser(refSeqFile);
         TabularTableCodec codec = new TabularTableCodec(CHR_COL, START_COL, END_COL, COMMENT);
         codec.setGenomeLocParser(genomeLocParser);
-        return AbstractFeatureReader.getFeatureReader(FILTER.getAbsolutePath(), codec, false);
+        return AbstractFeatureReader.getFeatureReader(f.getAbsolutePath(), codec, false);
     }
 
     public static void main(String[] args) {

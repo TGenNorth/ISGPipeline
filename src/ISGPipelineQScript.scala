@@ -77,10 +77,13 @@ class ISGPipelineQScript extends QScript {
   var COV_FILES: Set[File] = Set()
   var BAM_FILES: Set[File] = Set()
   var FASTA_FILES: Set[File] = Set()
+  var DUPS_FILES: Set[File] = Set()
+  
   def addVcf(vcf: File) { VCF_FILES += vcf }
   def addCov(cov: File) { COV_FILES += cov }
   def addBam(bam: File) { BAM_FILES += bam }
   def addFasta(fasta: File) { FASTA_FILES += fasta }
+  def addDups(dups: File) { DUPS_FILES += dups }
   
   trait UNIVERSAL_GATK_ARGS extends GATKCommandLineFunction {
     this.jarFile = gatkJarFile;
@@ -88,7 +91,6 @@ class ISGPipelineQScript extends QScript {
   }
   
   var referenceFile: File = _
-  var refDups: File = _
   var fastaDir: File = _
   var mummerDir: File = _
   var readsDir: File = _
@@ -114,7 +116,6 @@ class ISGPipelineQScript extends QScript {
     outDir = mkdir(new File(isgRoot, "out"))
     gbkDir = mkdir(new File(isgRoot, "genBank"))
     dupsDir = mkdir(new File(isgRoot, "dups"))
-    refDups = swapExt(dupsDir, referenceFile, ".fasta", ".interval_list")
     
     //add bams
     for(bam : File <- bamsDir.listFiles){
@@ -181,7 +182,7 @@ class ISGPipelineQScript extends QScript {
       
       add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile))
       add(new BatchRunner(all, allFinal))
-      add(new FilterDups(allFinal, refDups))
+      add(new FilterDups(allFinal, DUPS_FILES.toSeq))
     }
     
   }
@@ -192,9 +193,11 @@ class ISGPipelineQScript extends QScript {
     val ref = stripExtension(referenceFile)
     val prefix = mummerDir.getPath + "/" + ref + "_" + ref
     val coords = new File(mummerDir, ref + "_" + ref + ".coords")
+    val refDups = new File(dupsDir, ref + ".interval_list")
     
     add(new Nucmer(referenceFile, referenceFile, prefix, true, true))
     add(new CoordsDup(coords, referenceFile, refDups))
+    addDups(refDups)
     
     val fastas = FileUtils.listFiles(fastaDir, Array("fasta"), false)
     for (fasta <- fastas){
@@ -202,7 +205,11 @@ class ISGPipelineQScript extends QScript {
       val prefix = mummerDir.getPath + "/" + sampleName + "_" + sampleName
       val selfCoords = new File(mummerDir, sampleName + "_" + sampleName + ".coords")
       val refCoords = new File(mummerDir, ref + "_" + sampleName + ".coords")
+      val dups = new File(dupsDir, sampleName + ".interval_list")
+      
       add(new Nucmer(fasta, fasta, prefix, true, true))
+      add(new FindParalogs(selfCoords, refCoords, referenceFile, dups))
+      addDups(dups)
     }
   }
   
@@ -473,15 +480,18 @@ class ISGPipelineQScript extends QScript {
       optional("INDEL="+includeIndels)
   }
   
-  class FilterDups(@Input inMatrix: File, @Input inFilter: File) extends JavaCommandLineFunction {
+  class FilterDups(@Input inMatrix: File, @Input inFilter: Seq[File]) extends JavaCommandLineFunction {
     analysisName = "filterMatrix"
     javaMainClass = "isg.tools.FilterMatrix"
     @Output val uniqueOut: File = new File(outDir, "unique.variants.txt")
     @Output val dupsOut: File = new File(outDir, "dups.variants.txt")
     
-    override def commandLine = super.commandLine + required("INPUT="+inMatrix) + 
-      required("FILTER="+inFilter) + required("INCLUSIVE_OUT="+dupsOut) + 
-      required("EXCLUSIVE_OUT="+uniqueOut) + required("REFERENCE_SEQUENCE="+referenceFile)
+    override def commandLine = super.commandLine + 
+      required("INPUT="+inMatrix) + 
+      repeat("FILTER=", inFilter, spaceSeparated=false) +
+      required("INCLUSIVE_OUT="+dupsOut) + 
+      required("EXCLUSIVE_OUT="+uniqueOut) + 
+      required("REFERENCE_SEQUENCE="+referenceFile)
   }
   
   class BatchRunner(@Input in: File, @Output out: File) extends JavaCommandLineFunction {
@@ -490,6 +500,19 @@ class ISGPipelineQScript extends QScript {
     
     override def commandLine = super.commandLine + required("INPUT="+in) + required("OUTPUT="+out) +
       required("REFERENCE_SEQUENCE="+referenceFile) + required("GBK_DIR="+gbkDir)
+  }
+  
+  class FindParalogs(@Input selfCoords: File, @Input refCoords: File, @Input ref: File, @Output out: File) extends JavaCommandLineFunction {
+    @Input val inDict: File = swapExt(ref.getParent, ref, ".fasta", ".dict")
+    @Input val inFai: File = swapExt(ref.getParent, ref, ".fasta", ".fasta.fai")
+    analysisName = "findParalogs"
+    javaMainClass = "isg.tools.FindParalogs"
+    
+    override def commandLine = super.commandLine + 
+      required("SELF_COORDS="+selfCoords) + 
+      required("REF_COORDS="+refCoords) +
+      required("REFERENCE_SEQUENCE="+ref) + 
+      required("OUTPUT="+out)
   }
   
 }
