@@ -83,7 +83,6 @@ The "-mummer" argument must be the path to the root directory where Mummer is in
 When ISGPipeline is finished there will be a file called "isg_out.tab" in the 
 "analysis1/out" directory. This file is a matrix of ALL SNPs found by the pipeline. 
 
-
 --------------------------------------------------------------------------------
 --DIRECTORY STRUCTURE--
 --------------------------------------------------------------------------------
@@ -150,8 +149,16 @@ directory containing .vcf files of all variants detected by mummer and gatk. A .
 --------------------------------------------------------------------------------
 
 ISGPipeline allows the user to customize how each external program is run through 
-an options file provided when running ISGPipeline. This file is a key/value 
-properties file where each key represents 
+an options file provided when running ISGPipeline. An options file with default 
+values is provided in the dist/ directory of an ISGPipeline build. Below is an 
+example of using the --optionsfile argument:
+
+java -jar ISGPipeline.jar -S ISGPipelineQScript.scala \
+     -isg analysis1 \
+     --optionsfile path/to/optionsfile.txt
+     -run
+
+This file is a key/value properties file where each key represents 
 an argument to one of the programs ISGPipeline runs and the value corresponds to 
 how that argument is to be used. The key is formatted as follows 
 <program identifier>.<argument name>, where the program identifier is a unique id 
