@@ -33,6 +33,8 @@
     <!-- Make a copy of the jar file and add the version number to the filename -->
         <copy file="${dist.jar}" tofile="${dist.dir}/${application.title}-${version.num}.jar" />
         <copy file="src/ISGPipelineQScript.scala" todir="dist/"/>
+        <copy overwrite="true" file="README.txt" todir="dist/"/>
+        <copy file="optionsfile.txt" todir="dist/"/>
     </target>
 
     <target name="package-for-store" depends="jar">
