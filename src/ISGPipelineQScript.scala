@@ -261,10 +261,12 @@ class ISGPipelineQScript extends QScript {
       val sample = pair.getName
       val fastq1 = pair.getSeq1
       val fastq2 = pair.getSeq2
-      val sai1 = new File(bamsDir, sample + "_1.sai")
-      val sai2 = new File(bamsDir, sample + "_2.sai")
-      val sam = new File(bamsDir, sample + ".sam")
-      val rgBam = new File(bamsDir, sample + ".rg.bam")
+      val bamsTmpDir = new File(bamsDir, "tmp")
+      bamsTmpDir.mkdir
+      val sai1 = new File(bamsTmpDir, sample + "_1.sai")
+      val sai2 = new File(bamsTmpDir, sample + "_2.sai")
+      val sam = new File(bamsTmpDir, sample + ".sam")
+      val rgBam = new File(bamsTmpDir, sample + ".rg.bam")
       val uniqueBam = new File(bamsDir, sample + ".bam")
       
       add(new BWAAln(prefix, fastq1, sai1))
