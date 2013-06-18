@@ -64,7 +64,7 @@ of the directory structure corresponding to input file extensions:
 
 PLEASE NOTE: 
 Copy the reference fasta file to the root of the "analysis1" directory. 
-This file must be named: "ref.fasta". So, in this example, we would have the
+This file must be named "ref.fasta". So, in this example, we would have the
 file "analysis1/ref.fasta".
 
 3. Run ISGPipeline again, this time with arguments to the necessary dependencies 
@@ -98,7 +98,7 @@ from other genomes that you would like ISGPipeline to align. In this case, you
 would put the aligned reads (.bam and .bai) files in the bams/ directory and the 
 raw reads (.fastq) in the reads/ directory. ISGPipeline will use the bams/ directory 
 to write the results of aligning the raw reads and to store the .bam files that were 
-aligned before running ISGPipeline.
+aligned prior to running ISGPipeline.
 
 ROOT --> |---mummer (O)
          |
@@ -144,6 +144,34 @@ directory containing ISGPipeline results. Two files will be written here: out.ta
 ROOT-->vcf
 directory containing .vcf files of all variants detected by mummer and gatk. A .vcf file is created for each genome in the analysis.
 
+
+--------------------------------------------------------------------------------
+--OPTIONS FILE--
+--------------------------------------------------------------------------------
+
+ISGPipeline allows the user to customize how each external program is run through 
+an options file provided when running ISGPipeline. This file is a key/value 
+properties file where each key represents 
+an argument to one of the programs ISGPipeline runs and the value corresponds to 
+how that argument is to be used. The key is formatted as follows 
+<program identifier>.<argument name>, where the program identifier is a unique id 
+internal to ISGPipeline that identifies the program this argument applies to. 
+The "argument name" is the name of the argument for the program. For example, 
+the following two lines are found in the options file:
+
+UnifiedGenotyper.outMode=EMIT_VARIANTS_ONLY
+#UnifiedGenotyper.contamination_fraction_to_filter=<double>
+
+In this example "UnifiedGenotyper" is the unique program identifier specifying 
+the UnifiedGenotyper program in the GATK. The first line specifies the "outMode"
+argument and its value "EMIT_VARIANTS_ONLY". Since this line is uncommented 
+(doesn't begin with a '#') it is active and will be used whenever Unified Genotyper
+is executed by ISGPipeline. The second line specifies the argument
+"contamination_fraction_to_filter" with a placeholder value <double>. This argument 
+is not active because it begins with '#' and will be ignored by ISGPipeline. If 
+you would like to set the "contamination_fraction_to_filter" argument, simply 
+uncomment that line by removing the '#' character and replace the <double> with 
+a numeric value within the range specified in GATK's documentation.
 
 --------------------------------------------------------------------------------
 --DEPENDENCIES--
