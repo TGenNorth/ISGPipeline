@@ -182,7 +182,7 @@ class ISGPipelineQScript extends QScript {
       
       add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile))
       add(new BatchRunner(all, allFinal))
-      add(new FilterDups(allFinal, DUPS_FILES.toSeq))
+      if(!DUPS_FILES.isEmpty) add(new FilterDups(allFinal, DUPS_FILES.toSeq))
     }
     
   }
