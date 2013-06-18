@@ -91,20 +91,16 @@ public class FindParalogs extends CommandLineProgram {
                 refIndex = determineReferenceCoordIndex(coord, ref.getSequenceDictionary());
                 queryIndex = refIndex == 1 ? 0 : 1;
             }
-            final Coord refCoord = coord.getCoord(refIndex);
-            final Coord qryCoord = coord.getCoord(queryIndex);
-            if (refCoord.isReversed() && qryCoord.isReversed()) {
+            final Interval refCoord = toInterval(coord.getCoord(refIndex));
+            final Interval qryCoord = toInterval(coord.getCoord(queryIndex));
+            if (refCoord.isNegativeStrand() && qryCoord.isNegativeStrand()) {
                 throw new IllegalStateException("Ref and Qry coords are both reversed");
             }
 
-            final Interval intvl = new Interval(qryCoord.getChr(), qryCoord.getStart(), qryCoord.getEnd());
-            final Collection<Interval> overlaps = overlapDetector.getOverlaps(intvl);
+            final Collection<Interval> overlaps = overlapDetector.getOverlaps(qryCoord);
 
             for (Interval overlap : overlaps) {
-                Interval intersect = intvl.intersect(overlap);
-                int offset = intersect.getStart() - intvl.getStart();
-                int length = intersect.length();
-                intervalList.add(translate(offset, length, qryCoord, refCoord));
+                intervalList.add(translate(overlap, qryCoord, refCoord));
             }
         }
 
@@ -114,18 +110,41 @@ public class FindParalogs extends CommandLineProgram {
 
         return 0;
     }
+    
+    public Interval toInterval(Coord coord){
+        return new Interval(coord.getChr(), 
+                coord.getStart(), coord.getEnd(), coord.isReversed(), ".");
+    }
+    
+    /**
+     * 
+     * @param i1 interval to translate
+     * @param i2 interval that overlaps i1
+     * @param i3 target interval that matches i2
+     * @return 
+     */
+    public Interval translate(Interval i1, Interval i2, Interval i3){
+        return translate(calculateOverlap(i1, i2), i3);
+    }
 
-    public Interval translate(int offset, int length, Coord subject, Coord target) {
-        if (subject.isReversed() || target.isReversed()) {
-            return new Interval(target.getChr(),
-                    target.getEnd() - offset - length,
-                    target.getEnd() - offset,
+    public IntervalOverlapInfo calculateOverlap(Interval subject, Interval target) {
+        Interval intersect = subject.intersect(target);
+        int offset = intersect.getStart() - target.getStart();
+        int length = intersect.length() - 1;
+        return new IntervalOverlapInfo(offset, length, target.isNegativeStrand());
+    }
+
+    public Interval translate(IntervalOverlapInfo overlapInfo, Interval target) {
+        if (overlapInfo.reversed || target.isNegativeStrand()) {
+            return new Interval(target.getSequence(),
+                    Math.max(target.getStart(), target.getEnd() - overlapInfo.offset - overlapInfo.length),
+                    Math.max(target.getStart(), target.getEnd() - overlapInfo.offset),
                     true,
                     ".");
         } else {
-            return new Interval(target.getChr(),
-                    target.getStart() + offset,
-                    target.getStart() + offset + length,
+            return new Interval(target.getSequence(),
+                    Math.min(target.getEnd(), target.getStart() + overlapInfo.offset),
+                    Math.min(target.getEnd(), target.getStart() + overlapInfo.offset + overlapInfo.length),
                     false,
                     ".");
         }
@@ -151,5 +170,52 @@ public class FindParalogs extends CommandLineProgram {
         if (!ref.isIndexed()) {
             throw new PicardException("Fasta file must be indexed");
         }
+    }
+
+    public static final class IntervalOverlapInfo {
+
+        public final int offset;
+        public final int length;
+        public final boolean reversed;
+
+        public IntervalOverlapInfo(int offset, int length, boolean reversed) {
+            this.offset = offset;
+            this.length = length;
+            this.reversed = reversed;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final IntervalOverlapInfo other = (IntervalOverlapInfo) obj;
+            if (this.offset != other.offset) {
+                return false;
+            }
+            if (this.length != other.length) {
+                return false;
+            }
+            if (this.reversed != other.reversed) {
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 5;
+            return hash;
+        }
+
+        @Override
+        public String toString() {
+            return "IntervalOverlapInfo{" + "offset=" + offset + ", length=" + length + ", reversed=" + reversed + '}';
+        }
+        
+        
     }
 }
