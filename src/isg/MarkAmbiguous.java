@@ -7,6 +7,7 @@ package isg;
 import isg.util.Algorithm;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -39,10 +40,37 @@ public class MarkAmbiguous implements Algorithm<VariantContext, VariantContext> 
                 || (vc.hasLog10PError() && vc.getPhredScaledQual() < info.minQual)
                 || (vc.getGenotype(0).hasGQ() && vc.getGenotype(0).getGQ() < info.minGQ)
                 || (vc.hasAttribute(VCFConstants.DEPTH_KEY) && vc.getAttributeAsInt(VCFConstants.DEPTH_KEY, -1) < info.minDP)
-                || (vc.hasAttribute(VCFConstants.ALLELE_FREQUENCY_KEY) && vc.getAttributeAsDouble(VCFConstants.ALLELE_FREQUENCY_KEY, -1) < info.minAF)) {
+                || isBelowMinAF(vc)) {
             return makeAmbiguous(vc);
         }
         return vc;
+    }
+    
+    public boolean isBelowMinAF(VariantContext vc){
+        if(!vc.hasAttribute(VCFConstants.ALLELE_FREQUENCY_KEY)){
+            return false;
+        }
+        Object obj = vc.getAttribute(VCFConstants.ALLELE_FREQUENCY_KEY);
+        //AF field can have more than one value so check for a Collection first
+        if(obj instanceof Collection<?>){
+            Collection<?> values = (Collection<?>)obj;
+            for(Object value: values){
+                if(isDoubleBelowMinValue(value, info.minAF)){
+                    return true;
+                }
+            }
+            return false;
+        }else{
+            return isDoubleBelowMinValue(obj, info.minAF);
+        }
+    }
+    
+    public boolean isDoubleBelowMinValue(Object value, double minValue){
+        if(value instanceof Double){
+            return (Double)value < minValue;
+        }else{
+            return Double.valueOf((String)value) < minValue;
+        }
     }
     
     public VariantContext makeAmbiguous(VariantContext vc){

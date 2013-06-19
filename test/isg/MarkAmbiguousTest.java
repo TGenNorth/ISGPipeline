@@ -112,6 +112,10 @@ public class MarkAmbiguousTest {
         result = instance.apply(createSNP("C", "G", attr));
         assertVariantContextEquals(expResult, result);
         
+        attr.put("AF", Arrays.asList("1.0", "0.5"));
+        expResult = createSNP("C", "N", attr);
+        result = instance.apply(createSNP("C", "G", attr));
+        assertVariantContextEquals(expResult, result);
     }
     
     /**
@@ -176,6 +180,28 @@ public class MarkAmbiguousTest {
         VariantContext result = instance.makeAmbiguous(vc);
         assertVariantContextEquals(expResult, result);
         
+    }
+    
+    @Test
+    public void testIsBelowMinAF() {
+        System.out.println("isBelowMinAF");
+        MarkAmbiguous instance = new MarkAmbiguous(info);
+        Map<String, Object> attr = new HashMap<String,Object>();
+        attr.put("AF", 0.5);
+        VariantContext vc = createSNP("C", "N", attr);
+        assertTrue(instance.isBelowMinAF(vc));
+        
+        attr.put("AF", Arrays.asList("1.0", "1.0"));
+        vc = createSNP("C", "N", attr);
+        assertFalse(instance.isBelowMinAF(vc));
+        
+        attr.put("AF", Arrays.asList("1.0", "0.5"));
+        vc = createSNP("C", "N", attr);
+        assertTrue(instance.isBelowMinAF(vc));
+        
+        attr.clear();
+        vc = createSNP("C", "N", attr);
+        assertFalse(instance.isBelowMinAF(vc));
     }
     
     
