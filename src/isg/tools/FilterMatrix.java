@@ -4,10 +4,14 @@
  */
 package isg.tools;
 
+import isg.matrix.HeaderAttribute;
 import isg.matrix.VariantContextTabReader;
 import isg.matrix.VariantContextTabWriter;
+import isg.util.CompositeFilter;
+import isg.util.Filter;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -35,21 +39,28 @@ public class FilterMatrix extends CommandLineProgram {
     public String USAGE = "Filter ISG Matrix file.";
     @Option(doc = "ISG Matrix file", optional = false)
     public File INPUT;
-    @Option(doc = "Tabular file to filter by", optional = false)
-    public List<File> FILTER;
     @Option(doc = "File to write inclusive records", optional = false)
     public File INCLUSIVE_OUT;
     @Option(doc = "File to write exclusive records", optional = false)
     public File EXCLUSIVE_OUT;
-    @Option(doc = "Reference sequence file", optional = false)
-    public File REFERENCE_SEQUENCE;// = new File("test/data/ref.fasta");
-    @Option(doc = "0-based index of chr column.", optional = false)
+    @Option(doc = "Minimum allowable mismatch distance. Matrix records with a mismatch "
+            + "distance >= MINIMUM_MISMATCH will be written to the INCLUSIVE_OUT file all "
+            + "other records (including records without a mismatch attribute) will be written"
+            + "to the EXCLUSIVE_OUT file.", optional = true)
+    public Integer MINIMUM_MISMATCH;
+    @Option(doc = "Reference sequence file", optional = true)
+    public File REFERENCE_SEQUENCE;
+    @Option(doc = "Interval file to filter by. Matrix records that overlap an interval "
+            + "from one or more FILTER files will be written to the INCLUSIVE_OUT file "
+            + "all other records will be written to the EXCLUSIVE_OUT file.", optional = true)
+    public List<File> FILTER;
+    @Option(doc = "0-based index of chr column.", optional = true)
     public Integer CHR_COL = 0;
-    @Option(doc = "0-based index of start column", optional = false)
+    @Option(doc = "0-based index of start column", optional = true)
     public Integer START_COL = 1;
-    @Option(doc = "0-based index of end column", optional = false)
+    @Option(doc = "0-based index of end column", optional = true)
     public Integer END_COL = 2;
-    @Option(doc = "Ignore lines that start with this", optional = false)
+    @Option(doc = "Ignore lines that start with this", optional = true)
     public String COMMENT = "@";
 
     @Override
@@ -65,12 +76,11 @@ public class FilterMatrix extends CommandLineProgram {
             includeWriter.writeHeader(reader.getHeader());
             excludeWriter.writeHeader(reader.getHeader());
 
-            final OverlapDetector<Interval> overlapDetector = createOverlapDetector();
+            final Filter<VariantContext> vcFilter = createFilter();
+            
             VariantContext record;
             while ((record = reader.nextRecord()) != null) {
-                Interval i = new Interval(record.getChr(), record.getStart(), record.getEnd());
-                boolean overlapFound = !overlapDetector.getOverlaps(i).isEmpty();
-                VariantContextTabWriter writer = overlapFound ? includeWriter : excludeWriter;
+                VariantContextTabWriter writer = vcFilter.pass(record) ? includeWriter : excludeWriter;
                 writer.add(record);
             }
 
@@ -82,6 +92,17 @@ public class FilterMatrix extends CommandLineProgram {
             excludeWriter.close();
         }
         return 0;
+    }
+    
+    private Filter<VariantContext> createFilter() throws IOException{
+        List<Filter<VariantContext>> filtersToAdd = new ArrayList<Filter<VariantContext>>();
+        if(MINIMUM_MISMATCH!=null){
+            filtersToAdd.add(new MismatchFilter(MINIMUM_MISMATCH));
+        }
+        if(FILTER!=null && !FILTER.isEmpty()){
+            filtersToAdd.add(new OverlapFilter(createOverlapDetector()));
+        }
+        return new CompositeFilter(filtersToAdd);
     }
 
     private OverlapDetector<Interval> createOverlapDetector() throws IOException {
@@ -113,6 +134,43 @@ public class FilterMatrix extends CommandLineProgram {
         TabularTableCodec codec = new TabularTableCodec(CHR_COL, START_COL, END_COL, COMMENT);
         codec.setGenomeLocParser(genomeLocParser);
         return AbstractFeatureReader.getFeatureReader(f.getAbsolutePath(), codec, false);
+    }
+    
+    private static final class MismatchFilter implements Filter<VariantContext>{
+
+        private final int min;
+        
+        public MismatchFilter(int min){
+            this.min = min;
+        }
+        
+        @Override
+        public boolean pass(VariantContext vc) {
+            if(vc.hasAttribute(HeaderAttribute.MISMATCH.getName())){
+                Object value = vc.getAttribute(HeaderAttribute.MISMATCH.getName());
+                if(Integer.valueOf((String)value) >= min){
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+    }
+    
+    private static final class OverlapFilter implements Filter<VariantContext>{
+
+        private final OverlapDetector<Interval> overlapDetector;
+        
+        public OverlapFilter(OverlapDetector<Interval> overlapDetector){
+            this.overlapDetector = overlapDetector;
+        }
+        
+        @Override
+        public boolean pass(VariantContext vc) {
+            Interval i = new Interval(vc.getChr(), vc.getStart(), vc.getEnd());
+            return !overlapDetector.getOverlaps(i).isEmpty();
+        }
+        
     }
 
     public static void main(String[] args) {

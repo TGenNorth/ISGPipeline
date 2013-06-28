@@ -5,6 +5,7 @@
 package isg.util;
 
 import isg.util.Filter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -17,6 +18,10 @@ public class CompositeFilter<T> implements Filter<T> {
 
     public CompositeFilter(Filter<T>... filters) {
         this.filters = Arrays.asList(filters);
+    }
+    
+    public CompositeFilter(List<Filter<T>> filters) {
+        this.filters = new ArrayList<Filter<T>>(filters);
     }
 
     @Override
