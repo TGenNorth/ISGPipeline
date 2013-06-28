@@ -267,7 +267,10 @@ class ISGPipelineQScript extends QScript {
       val sai2 = new File(bamsTmpDir, sample + "_2.sai")
       val sam = new File(bamsTmpDir, sample + ".sam")
       val rgBam = new File(bamsTmpDir, sample + ".rg.bam")
+      val targetIntervals = new File(bamsTmpDir, sample + ".intervals")
+      val realignedBam = new File(bamsTmpDir, sample + ".realigned.bam")
       val uniqueBam = new File(bamsDir, sample + ".bam")
+      
       
       add(new BWAAln(prefix, fastq1, sai1))
       if(fastq2!=null){ //paired-end
@@ -278,7 +281,9 @@ class ISGPipelineQScript extends QScript {
       }
       
       add(new AddRG(sam, rgBam, sample))
-      add(new RMDups(rgBam, uniqueBam))
+      add(new RealignerTargetCreator(rgBam, referenceFile, targetIntervals))
+      add(new IndelRealigner(rgBam, targetIntervals, referenceFile, realignedBam))
+      add(new RMDups(realignedBam, uniqueBam))
       addBam(uniqueBam)
     
     }
@@ -371,7 +376,7 @@ class ISGPipelineQScript extends QScript {
     this.RGLB = LB
     this.RGPU = PU
     this.RGPL = PL
-    this.createIndex = false
+    this.createIndex = true
     this.isIntermediate = intermediate
   }
   
@@ -412,15 +417,36 @@ class ISGPipelineQScript extends QScript {
   }
   
   class CoordsCov(coords: File, ref: File, out: File) extends CoordsCoverageInProcessFunction {
+    @Input val dict: File = swapExt(ref.getParent, ref, ".fasta", ".dict")
     this.coordsFile = coords
     this.referenceSequence = ref
     this.outFile = out
   }
   
   class CoordsDup(coords: File, ref: File, out: File) extends CoordsDupsInProcessFunction {
+    @Input val dict: File = swapExt(ref.getParent, ref, ".fasta", ".dict")
     this.coordsFile = coords
     this.referenceSequence = ref
     this.outFile = out
+  }
+  
+  class RealignerTargetCreator(inBam: File, ref: File, outTargetIntervals: File) extends RealignerTargetCreatorCommandLineFunction with UNIVERSAL_GATK_ARGS {
+    @Input val dict: File = swapExt(ref.getParent, ref, ".fasta", ".dict")
+    @Input val fai: File = swapExt(ref.getParent, ref, ".fasta", ".fasta.fai")
+    this.inputFile = inBam 
+    this.referenceFile = ref
+    this.out = outTargetIntervals
+    this.isIntermediate = true;
+  }
+  
+  class IndelRealigner(inBam: File, inTargetIntervals: File, ref: File, outBam: File) extends IndelRealignerCommandLineFunction with UNIVERSAL_GATK_ARGS {
+    @Input val dict: File = swapExt(ref.getParent, ref, ".fasta", ".dict")
+    @Input val fai: File = swapExt(ref.getParent, ref, ".fasta", ".fasta.fai")
+    this.inputFile = inBam 
+    this.referenceFile = ref
+    this.out = outBam
+    this.targetIntervals = inTargetIntervals
+    this.isIntermediate = true
   }
   
   class UG(bam: File, ref: File, outVCF: File) extends UnifiedGenotyperCommandLineFunction with UNIVERSAL_GATK_ARGS {
