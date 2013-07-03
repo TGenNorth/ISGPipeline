@@ -60,4 +60,14 @@ public class LociStateCallerFactory {
         }
         return new LociStateCallerImpl(overlapDetector, CalledState.NO_COVERAGE);
     }
+    
+    public static LociStateCaller createEmptyStateCaller(){
+        return new LociStateCaller(){
+
+            @Override
+            public CalledState call(String chr, int pos) {
+                return CalledState.NO_COVERAGE;
+            }
+        };
+    }
 }

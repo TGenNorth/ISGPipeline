@@ -213,12 +213,11 @@ public class ISG2 extends CommandLineProgram {
         final String extensions[] = {".bed", ".interval_list"};
         for (final String sample : samplesToInclude) {
             File f = FileUtils.findFileUsingExtensions(COV_DIR, sample, extensions);
-            if (f == null) {
-                System.out.println("WARNING: Could not find coverage file for sample: " + sample);
-                continue;
+            if(f==null){
+                Logger.getLogger(ISG2.class.getName()).log(Level.WARNING, "Could not find coverage file for sample ''{0}''", sample);
             }
             try {
-                LociStateCaller lociStateCaller = LociStateCallerFactory.createFromFile(f);
+                LociStateCaller lociStateCaller = (f==null ? LociStateCallerFactory.createEmptyStateCaller() : LociStateCallerFactory.createFromFile(f));
                 SingleSampleGenotyper ssg = new SingleSampleGenotyperImpl(sample, lociStateCaller);
                 ret.add(ssg);
             } catch (IOException ex) {
