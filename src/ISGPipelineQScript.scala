@@ -66,6 +66,9 @@ class ISGPipelineQScript extends QScript {
   @Argument(doc="Include indels in final output.", required=false)
   var includeIndels: Boolean = false
   
+  @Argument(doc="Run bwa mem algorithm.", required=false)
+  var useBWAMem: Boolean = false
+  
   val PATTERNS: java.util.List[SequenceFilePairPattern] = 
     Arrays.asList(new SequenceFilePairPattern("(.*)_[0-9]+_([0-9])_sequence\\..*"),
                 new SequenceFilePairPattern("(.*)_[ATCG]+_L[0-9]+_R([0-9])_[0-9]+\\..*"),
@@ -95,6 +98,7 @@ class ISGPipelineQScript extends QScript {
   var mummerDir: File = _
   var readsDir: File = _
   var bamsDir: File = _
+  var bamsTmpDir: File = _
   var vcfDir: File = _
   var covDir: File = _
   var outDir: File = _
@@ -116,6 +120,9 @@ class ISGPipelineQScript extends QScript {
     outDir = mkdir(new File(isgRoot, "out"))
     gbkDir = mkdir(new File(isgRoot, "genBank"))
     dupsDir = mkdir(new File(isgRoot, "dups"))
+    
+    bamsTmpDir = new File(bamsDir, "tmp")
+    bamsTmpDir.mkdir
     
     //add bams
     for(bam : File <- bamsDir.listFiles){
@@ -261,24 +268,11 @@ class ISGPipelineQScript extends QScript {
       val sample = pair.getName
       val fastq1 = pair.getSeq1
       val fastq2 = pair.getSeq2
-      val bamsTmpDir = new File(bamsDir, "tmp")
-      bamsTmpDir.mkdir
-      val sai1 = new File(bamsTmpDir, sample + "_1.sai")
-      val sai2 = new File(bamsTmpDir, sample + "_2.sai")
-      val sam = new File(bamsTmpDir, sample + ".sam")
+      val sam = bwa(prefix, sample, fastq1, fastq2)
       val rgBam = new File(bamsTmpDir, sample + ".rg.bam")
       val targetIntervals = new File(bamsTmpDir, sample + ".intervals")
       val realignedBam = new File(bamsTmpDir, sample + ".realigned.bam")
       val uniqueBam = new File(bamsDir, sample + ".bam")
-      
-      
-      add(new BWAAln(prefix, fastq1, sai1))
-      if(fastq2!=null){ //paired-end
-        add(new BWAAln(prefix, fastq2, sai2))
-        add(new BWASampe(prefix, sai1, sai2, fastq1, fastq2, sam))
-      }else{ //single-end
-        add(new BWASamse(prefix, sai1, fastq1, sam))
-      }
       
       add(new AddRG(sam, rgBam, sample))
       add(new RealignerTargetCreator(rgBam, referenceFile, targetIntervals))
@@ -287,6 +281,24 @@ class ISGPipelineQScript extends QScript {
       addBam(uniqueBam)
     
     }
+  }
+  
+  def bwa(prefix: String, sample: String, fastq1: File, fastq2: File): File = {
+    val sam = new File(bamsTmpDir, sample + ".sam")  
+    if(useBWAMem){
+      add(new BWAMem(prefix, fastq1, fastq2, sam))
+    }else{
+      val sai1 = new File(bamsTmpDir, sample + "_1.sai")
+      val sai2 = new File(bamsTmpDir, sample + "_2.sai")
+      add(new BWAAln(prefix, fastq1, sai1))
+      if(fastq2!=null){ //paired-end
+        add(new BWAAln(prefix, fastq2, sai2))
+        add(new BWASampe(prefix, sai1, sai2, fastq1, fastq2, sam))
+      }else{ //single-end
+        add(new BWASamse(prefix, sai1, fastq1, sam))
+      }
+    }   
+    return sam
   }
   
   def callSnpsAndCalculateCoverageOnBams() {
@@ -340,6 +352,15 @@ class ISGPipelineQScript extends QScript {
     this.saiFile = sai
     this.fastqFile = fastq
     this.isIntermediate = intermediate
+  }
+  
+  class BWAMem(prfx: String, reads: File, mates: File, sam: File) extends BWAMemCommandLineFunction {
+    this.bwa = pathToBWA
+    this.prefix = prfx
+    this.readsFile = reads
+    this.matesFile = mates
+    this.samFile = sam
+    this.isIntermediate = true
   }
   
   class BWASampe(prfx: String, @Input saiFile1: File, @Input saiFile2: File, @Input fqFile1: File, @Input fqFile2: File, @Output samFile: File, intermediate: Boolean = true) extends BWASampeCommandLineFunction {
