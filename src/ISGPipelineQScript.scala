@@ -360,6 +360,7 @@ class ISGPipelineQScript extends QScript {
     this.readsFile = reads
     this.matesFile = mates
     this.samFile = sam
+    this.M = true
     this.isIntermediate = true
   }
   
