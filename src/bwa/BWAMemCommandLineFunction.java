@@ -43,6 +43,54 @@ public class BWAMemCommandLineFunction extends BWACommandLineFunction {
     public File samFile;
     
     @Argument
+    public Integer t = null;
+    
+    @Argument
+    public Integer k = null;
+    
+    @Argument
+    public Integer w = null;
+    
+    @Argument
+    public Integer d = null;
+    
+    @Argument
+    public Float r = null;
+    
+    @Argument
+    public Integer c = null;
+    
+    @Argument
+    public Boolean P = false;
+    
+    @Argument
+    public Integer A = null;
+    
+    @Argument
+    public Integer B = null;
+    
+    @Argument
+    public Integer O = null;
+    
+    @Argument
+    public Integer E = null;
+    
+    @Argument
+    public Integer L = null;
+    
+    @Argument
+    public Integer U = null;
+    
+    @Argument
+    public Integer T = null;
+    
+    @Argument
+    public Boolean a = false;
+    
+    @Argument
+    public Boolean H = false;
+    
+    @Argument
     public Boolean M = false;
     
     @Override
@@ -64,6 +112,22 @@ public class BWAMemCommandLineFunction extends BWACommandLineFunction {
     public String commandLine() {
         return required(bwa)
                 + required("mem")
+                + optional("-t", t, "", true, true, "%s")
+                + optional("-k", k, "", true, true, "%s")
+                + optional("-w", w, "", true, true, "%s")
+                + optional("-d", d, "", true, true, "%s")
+                + optional("-r", r, "", true, true, "%s")
+                + optional("-c", c, "", true, true, "%s")
+                + conditional(P, "-P", true, "%s")
+                + optional("-A", A, "", true, true, "%s")
+                + optional("-B", B, "", true, true, "%s")
+                + optional("-O", O, "", true, true, "%s")
+                + optional("-E", E, "", true, true, "%s")
+                + optional("-L", L, "", true, true, "%s")
+                + optional("-U", U, "", true, true, "%s")
+                + optional("-T", T, "", true, true, "%s")
+                + conditional(a, "-a", true, "%s")
+                + conditional(H, "-H", true, "%s")
                 + conditional(M, "-M", true, "%s")
                 + required(prefix)
                 + required(readsFile)
