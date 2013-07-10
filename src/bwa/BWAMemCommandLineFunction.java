@@ -43,55 +43,55 @@ public class BWAMemCommandLineFunction extends BWACommandLineFunction {
     @Output(required=true)
     public File samFile;
     
-    @Argument
+    @Argument(required=false)
     public Integer t = null;
     
-    @Argument
+    @Argument(required=false)
     public Integer k = null;
     
-    @Argument
+    @Argument(required=false)
     public Integer w = null;
     
-    @Argument
+    @Argument(required=false)
     public Integer d = null;
     
-    @Argument
+    @Argument(required=false)
     public Float r = null;
     
-    @Argument
+    @Argument(required=false)
     public Integer c = null;
     
-    @Argument
+    @Argument(required=false)
     public Boolean P = false;
     
-    @Argument
+    @Argument(required=false)
     public Integer A = null;
     
-    @Argument
+    @Argument(required=false)
     public Integer B = null;
     
-    @Argument
+    @Argument(required=false)
     public Integer O = null;
     
-    @Argument
+    @Argument(required=false)
     public Integer E = null;
     
-    @Argument
+    @Argument(required=false)
     public Integer L = null;
     
-    @Argument
+    @Argument(required=false)
     public Integer U = null;
     
-    @Argument
+    @Argument(required=false)
     public Integer T = null;
     
-    @Argument
+    @Argument(required=false)
     public Boolean a = false;
     
-    @Argument
+    @Argument(required=false)
     public Boolean H = false;
     
-    @Argument
+    @Argument(required=false)
     public Boolean M = false;
     
     @Override
