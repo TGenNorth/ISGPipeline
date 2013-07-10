@@ -8,6 +8,7 @@ import java.io.File;
 import org.broadinstitute.sting.commandline.Argument;
 import org.broadinstitute.sting.commandline.Input;
 import org.broadinstitute.sting.commandline.Output;
+import util.InterleavedFastqDetector;
 
 /**
  *
@@ -108,6 +109,13 @@ public class BWAMemCommandLineFunction extends BWACommandLineFunction {
         super.freezeFieldValues();
     }
     
+    private boolean isInterleaved(){
+        if(matesFile!=null){
+            return false;
+        }
+        return InterleavedFastqDetector.isInterleaved(readsFile);
+    }
+    
     @Override
     public String commandLine() {
         return required(bwa)
@@ -126,6 +134,7 @@ public class BWAMemCommandLineFunction extends BWACommandLineFunction {
                 + optional("-L", L, "", true, true, "%s")
                 + optional("-U", U, "", true, true, "%s")
                 + optional("-T", T, "", true, true, "%s")
+                + conditional(isInterleaved(), "-p", true, "%s")
                 + conditional(a, "-a", true, "%s")
                 + conditional(H, "-H", true, "%s")
                 + conditional(M, "-M", true, "%s")
