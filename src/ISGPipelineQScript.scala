@@ -388,6 +388,7 @@ class ISGPipelineQScript extends QScript {
     this.input = List(in)
     this.output = out
     this.REMOVE_DUPLICATES = RM_DUPS
+    this.outputIndex = swapExt(out.getParent, out, ".bam", ".bai")
   }
   
   class AddRG(@Input in: File, @Output out: File, SM: String, ID: String = "1", LB: String = ".", PL: String = ".", PU: String = ".", intermediate: Boolean = true) extends AddOrReplaceReadGroups {
@@ -400,6 +401,7 @@ class ISGPipelineQScript extends QScript {
     this.RGPL = PL
     this.createIndex = true
     this.isIntermediate = intermediate
+    this.outputIndex = swapExt(out.getParent, out, ".bam", ".bai")
   }
   
   class Nucmer(inRef: File, inQry: File, prfx: String, mm: Boolean = false, ns: Boolean = false) extends NucmerCommandLineFunction {
