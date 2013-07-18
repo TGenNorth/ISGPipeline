@@ -70,11 +70,10 @@ class ISGPipelineQScript extends QScript {
   var useBWAMem: Boolean = false
   
   val PATTERNS: java.util.List[SequenceFilePairPattern] = 
-    Arrays.asList(new SequenceFilePairPattern("(.*)_[0-9]+_([0-9])_sequence\\..*"),
-                new SequenceFilePairPattern("(.*)_[ATCG]+_L[0-9]+_R([0-9])_[0-9]+\\..*"),
-                new SequenceFilePairPattern("(.*)_S[0-9]+_L[0-9]+_R([0-9])_[0-9]+\\..*"),
-                new SequenceFilePairPattern("(.*)_R([0-9])_[0-9]+\\..*"),
-                new SequenceFilePairPattern("(.*)_R([0-9])\\..*"),
+    Arrays.asList(new SequenceFilePairPattern("(.*)_[0-9]+_([12])_sequence\\..*"),
+                new SequenceFilePairPattern("(.*)_[ATCG]+_L[0-9]+_R([12])_[0-9]+\\..*"),
+                new SequenceFilePairPattern("(.*)_S[0-9]+_L[0-9]+_R([12])_[0-9]+\\..*"),
+                new SequenceFilePairPattern("(.*)_R([12])[_\\.].*"),
                 new SequenceFilePairPattern("(.*)_([12])\\..*"));
   var VCF_FILES: Set[File] = Set()
   var COV_FILES: Set[File] = Set()
