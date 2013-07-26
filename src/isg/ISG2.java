@@ -159,7 +159,7 @@ public class ISG2 extends CommandLineProgram {
                 System.out.println("Written " + written + " records.");
             }
         }
-        
+
         //close writers
         allWriter.close();
     }
@@ -213,11 +213,11 @@ public class ISG2 extends CommandLineProgram {
         final String extensions[] = {".bed", ".interval_list"};
         for (final String sample : samplesToInclude) {
             File f = FileUtils.findFileUsingExtensions(COV_DIR, sample, extensions);
-            if(f==null){
+            if (f == null) {
                 Logger.getLogger(ISG2.class.getName()).log(Level.WARNING, "Could not find coverage file for sample ''{0}''", sample);
             }
             try {
-                LociStateCaller lociStateCaller = (f==null ? LociStateCallerFactory.createEmptyStateCaller() : LociStateCallerFactory.createFromFile(f));
+                LociStateCaller lociStateCaller = (f == null ? LociStateCallerFactory.createEmptyStateCaller() : LociStateCallerFactory.createFromFile(f));
                 SingleSampleGenotyper ssg = new SingleSampleGenotyperImpl(sample, lociStateCaller);
                 ret.add(ssg);
             } catch (IOException ex) {
@@ -228,26 +228,30 @@ public class ISG2 extends CommandLineProgram {
     }
 
     private List<Iterator<VariantContext>> createVCFIters(Set<String> samplesToInclude) {
+        Set<String> leftoverSamples = new HashSet<String>(samplesToInclude);
         final List<Iterator<VariantContext>> ret = new ArrayList<Iterator<VariantContext>>();
-        for (final String sample : samplesToInclude) {
-
-            File f = new File(VCF_DIR, sample + ".vcf");
-            if (!f.exists()) {
-                throw new IllegalStateException("Could not find file: " + f.getAbsolutePath());
+        for (final File f : VCF_DIR.listFiles()) {
+            if (!f.getName().endsWith(".vcf")) {
+                continue;
             }
-
             final FeatureReader<VariantContext> vcfReader = createVCFReader(f);
             final VCFHeader header = (VCFHeader) vcfReader.getHeader();
 
             List<String> samples = header.getGenotypeSamples();
-            if (samples.size() > 1) {
+            if (!samplesToInclude.containsAll(samples)) {
+                continue;
+            } else if (samples.size() > 1) {
                 throw new IllegalStateException("multiple genotype samples per vcf file is not supported: " + f.getAbsolutePath());
             } else if (samples.isEmpty()) {
                 throw new IllegalStateException("vcf file doesn't have any genotype samples: " + f.getAbsolutePath());
             }
+            leftoverSamples.removeAll(samples);
             Iterator<VariantContext> iter = getIteratorQuietly(vcfReader);
             ret.add(iter);
+        }
 
+        if (!leftoverSamples.isEmpty()) {
+            throw new IllegalStateException("Could not find vcf files for the following samples: " + leftoverSamples);
         }
         return ret;
     }

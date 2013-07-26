@@ -25,6 +25,7 @@ import mummer.coords.CoordsDupsInProcessFunction
 import mummer.snps.MumSnpToVcf
 import org.apache.commons.io.FileUtils
 import util.TypedProperties
+import util.GenomicFileUtils
 
 class ISGPipelineQScript extends QScript {
 
@@ -80,12 +81,14 @@ class ISGPipelineQScript extends QScript {
   var BAM_FILES: Set[File] = Set()
   var FASTA_FILES: Set[File] = Set()
   var DUPS_FILES: Set[File] = Set()
+  var SAMPLES: Set[String] = Set()
   
   def addVcf(vcf: File) { VCF_FILES += vcf }
   def addCov(cov: File) { COV_FILES += cov }
   def addBam(bam: File) { BAM_FILES += bam }
   def addFasta(fasta: File) { FASTA_FILES += fasta }
   def addDups(dups: File) { DUPS_FILES += dups }
+  def addSample(sample: String) { SAMPLES += sample }
   
   trait UNIVERSAL_GATK_ARGS extends GATKCommandLineFunction {
     this.jarFile = gatkJarFile;
@@ -130,7 +133,10 @@ class ISGPipelineQScript extends QScript {
     
     //add vcfs
     for(vcf : File <- vcfDir.listFiles){
-      if(vcf.getName.endsWith(".vcf")) addVcf(vcf)
+      if(vcf.getName.endsWith(".vcf")){
+        addVcf(vcf)
+        addSample(GenomicFileUtils.extractFirstSampleName(vcf))
+      }
     }
     
     //add fastas
@@ -178,22 +184,20 @@ class ISGPipelineQScript extends QScript {
     init
     bwa
     mummer
-    dups
     callSnpsAndCalculateCoverageOnBams
-    callSnpsAndCalculateCoverageOnFastas
     
     if(!VCF_FILES.isEmpty){
       val all = new File(outDir, "all.variants.txt");
       val allFinal = new File(outDir, "all.variants.final.txt");
       
-      add(new ISG(VCF_FILES.toSeq, COV_FILES.toSeq, referenceFile))
+      add(new ISG(referenceFile))
       add(new BatchRunner(all, allFinal))
       if(!DUPS_FILES.isEmpty) add(new FilterDups(allFinal, DUPS_FILES.toSeq))
     }
     
   }
   
-  def dups() {
+  def mummer() {
     if(pathToMummer==null) return
     
     val ref = stripExtension(referenceFile)
@@ -207,25 +211,12 @@ class ISGPipelineQScript extends QScript {
     
     val fastas = FileUtils.listFiles(fastaDir, Array("fasta"), false)
     for (fasta <- fastas){
-      val sampleName = stripExtension(fasta)
+      val sampleName = GenomicFileUtils.extractFirstSampleName(fasta)
       val prefix = mummerDir.getPath + "/" + sampleName + "_" + sampleName
       val selfCoords = new File(mummerDir, sampleName + "_" + sampleName + ".coords")
       val refCoords = new File(mummerDir, ref + "_" + sampleName + ".coords")
       val dups = new File(dupsDir, sampleName + ".interval_list")
-      
-      add(new Nucmer(fasta, fasta, prefix, true, true))
-      add(new FindParalogs(selfCoords, refCoords, referenceFile, dups))
-      addDups(dups)
-    }
-  }
-  
-  def mummer() {
-    if(pathToMummer==null) return
-    
-    val fastas = FileUtils.listFiles(fastaDir, Array("fasta"), false)
-    for (fasta <- fastas){
-      
-      val sampleName = stripExtension(fasta)
+      val cov = new File(covDir, sampleName + ".interval_list")
       val vcf = new File(vcfDir, sampleName + ".vcf")
       
       //find snps in both directions
@@ -233,6 +224,13 @@ class ISGPipelineQScript extends QScript {
       val qrySnps = mummer(fasta, referenceFile, true)
       add(new ToVcf(refSnps, qrySnps, vcf, sampleName))
       addVcf(vcf)
+      addSample(sampleName)
+      
+      //find dups
+      add(new CoordsCov(refCoords, referenceFile, cov))
+      add(new Nucmer(fasta, fasta, prefix, true, true))
+      add(new FindParalogs(selfCoords, refCoords, referenceFile, dups))
+      addDups(dups)
     }
   }
   
@@ -278,6 +276,7 @@ class ISGPipelineQScript extends QScript {
       add(new IndelRealigner(rgBam, targetIntervals, referenceFile, realignedBam))
       add(new RMDups(realignedBam, uniqueBam))
       addBam(uniqueBam)
+      addSample(sample)
     
     }
   }
@@ -303,23 +302,14 @@ class ISGPipelineQScript extends QScript {
   def callSnpsAndCalculateCoverageOnBams() {
     if(gatkJarFile==null) return
     for(bam : File <- BAM_FILES){
-      val sample = stripExtension(bam)
+      val sample = GenomicFileUtils.extractFirstSampleName(bam)
       val vcf = new File(vcfDir, sample + ".vcf")
       val bed = new File(covDir, sample + ".bed")
       add(new UG(bam, referenceFile, vcf))
       add(new CallableLoci(bam, referenceFile, bed))
       addCov(bed)
       addVcf(vcf)
-    }
-  }
-  
-  def callSnpsAndCalculateCoverageOnFastas() {
-    if(pathToMummer==null) return
-    for(fasta : File <- FASTA_FILES){
-      val sample = stripExtension(fasta)
-      val coords = new File(mummerDir, stripExtension(referenceFile) + "_" + stripExtension(fasta) + ".coords")
-      val cov = new File(covDir, sample + ".interval_list")
-      add(new CoordsCov(coords, referenceFile, cov))
+      addSample(sample)
     }
   }
   
@@ -504,21 +494,15 @@ class ISGPipelineQScript extends QScript {
     override def commandLine = super.commandLine + required("R=" + ref)
   }
   
-  class ISG(@Input input: Seq[File], @Input covFiles: Seq[File], @Input ref: File) extends JavaCommandLineFunction {
+  class ISG(@Input ref: File) extends JavaCommandLineFunction {
     analysisName = "isg"
     javaMainClass = "isg.ISG2"
+    @Input var vcfFiles: Seq[File] = VCF_FILES.toSeq
+    @Input var covFiles: Seq[File] = COV_FILES.toSeq
     @Output val allOut: File = new File(outDir, "all.variants.txt")
-    var samples: List[String] = Nil
-
-    override def freezeFieldValues() {
-      super.freezeFieldValues()
-      for(in : File <- input){
-        samples = in.getName.stripSuffix(".vcf") :: samples
-      }
-    }
     
     override def commandLine = super.commandLine + 
-      repeat("SAMPLE=", samples, spaceSeparated=false) +
+      repeat("SAMPLE=", SAMPLES, spaceSeparated=false) +
       required("OUT_DIR="+outDir) +
       required("REF="+ref) +
       required("VCF_DIR="+vcfDir) +
