@@ -11,6 +11,14 @@
     <description>Builds, tests, and runs the project ISGPipeline.</description>
     <import file="nbproject/build-impl.xml"/>
     
+    <target name="-pre-init">
+        <path id="classpath">
+            <fileset dir="${dist.dir}/lib">
+                <include name="**/*.jar"/>
+            </fileset>
+        </path>
+    </target>
+    
     <target name="-post-jar">
         <property name="version.num" value="0.16.8" />
 <!--        <buildnumber file="build.num" />-->
@@ -30,12 +38,52 @@
     <!--Sign the jar file with you credentials -->
     <!--<signjar jar="${dist.jar}" alias="..." keystore="..." storepass="..." />-->
     
+    <!-- Create a jar for each command-line class so it can be run java -jar jarfile -->
+
+        <package-jar title="DetermineStatus"         main-class="isg.tools.DetermineStatus"/>
+        <package-jar title="CalculateStatistics"    main-class="isg.tools.CalculateStatistics"/>
+        <package-jar title="CalculateMismatch"      main-class="isg.tools.CalculateMismatch"/>
+        <package-jar title="FilterMatrix"           main-class="isg.tools.FilterMatrix"/>
+        <package-jar title="ISGToolsBatchRunner"    main-class="isg.tools.ISGToolsBatchRunner"/>
+        <package-jar title="RemoveGenomes"          main-class="isg.tools.RemoveGenomes"/>
+        <package-jar title="ClassifyMatrix"          main-class="isg.tools.ClassifyMatrix"/>
+        <package-jar title="CalculatePattern"          main-class="isg.tools.CalculatePattern"/>
+        <package-jar title="FindParalogs"          main-class="isg.tools.FindParalogs"/>
+    
     <!-- Make a copy of the jar file and add the version number to the filename -->
         <copy file="${dist.jar}" tofile="${dist.dir}/${application.title}-${version.num}.jar" />
         <copy file="src/ISGPipelineQScript.scala" todir="dist/"/>
         <copy overwrite="true" file="README.txt" todir="dist/"/>
         <copy file="optionsfile.txt" todir="dist/"/>
     </target>
+    
+    
+    
+    <!-- Create a jar for a command-line class so it can be run java -jar jarfile -->
+    <macrodef name="package-jar">
+        <attribute name="main-class"/>
+        <attribute name="title"/>
+        <sequential>
+            <pathconvert property="jar.classpath" pathsep=" ">
+                <path refid="classpath"/>
+                <mapper>
+                    <chainedmapper>
+                        <flattenmapper/>
+                        <globmapper from="*.jar" to="lib/*.jar"/>
+                    </chainedmapper>
+                </mapper>
+            </pathconvert>
+            <jar destfile="${dist.dir}/@{title}.jar">
+                <fileset dir="${build.classes.dir}" includes="**/*"/>
+<!--                <zipgroupfileset dir="${lib}" includes="*.jar"/>-->
+                <manifest>
+                    <attribute name="Implementation-Title" value="@{title}"/>
+                    <attribute name="Main-Class" value="@{main-class}"/>
+                    <attribute name="Class-Path" value="${jar.classpath}"/>
+                </manifest>
+            </jar>
+        </sequential>
+    </macrodef>
 
     <target name="package-for-store" depends="jar">
 
