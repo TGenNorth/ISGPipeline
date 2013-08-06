@@ -94,6 +94,8 @@ public class BWAMemCommandLineFunction extends BWACommandLineFunction {
     @Argument(required=false)
     public Boolean M = false;
     
+    public Boolean interleaved = null;
+    
     @Override
     public String analysisName() {
         return "bwa.mem";
@@ -106,6 +108,9 @@ public class BWAMemCommandLineFunction extends BWACommandLineFunction {
         ann = new File(prefix + ".ann");
         pac = new File(prefix + ".pac");
         sa = new File(prefix + ".sa");
+        if(interleaved==null){
+            interleaved = isInterleaved();
+        }
         super.freezeFieldValues();
     }
     
@@ -134,7 +139,7 @@ public class BWAMemCommandLineFunction extends BWACommandLineFunction {
                 + optional("-L", L, "", true, true, "%s")
                 + optional("-U", U, "", true, true, "%s")
                 + optional("-T", T, "", true, true, "%s")
-                + conditional(isInterleaved(), "-p", true, "%s")
+                + conditional(interleaved, "-p", true, "%s")
                 + conditional(a, "-a", true, "%s")
                 + conditional(H, "-H", true, "%s")
                 + conditional(M, "-M", true, "%s")

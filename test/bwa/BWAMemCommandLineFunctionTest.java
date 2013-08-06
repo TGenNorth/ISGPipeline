@@ -175,6 +175,7 @@ public class BWAMemCommandLineFunctionTest {
         instance.prefix = "ref";
         instance.readsFile = new File("in.fastq");
         instance.samFile = new File("out.sam");
+        instance.interleaved = false;
         return instance;
     }
 }
