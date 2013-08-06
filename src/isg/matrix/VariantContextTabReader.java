@@ -4,6 +4,7 @@
  */
 package isg.matrix;
 
+import com.google.common.collect.AbstractIterator;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -14,6 +15,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -166,5 +168,17 @@ public class VariantContextTabReader {
 
     public VariantContextTabHeader getHeader() {
         return header;
+    }
+    
+    public Iterator<VariantContext> iterator() {
+        return new AbstractIterator<VariantContext>(){
+
+            @Override
+            protected VariantContext computeNext() {
+                VariantContext next = nextRecord();
+                return next==null ? endOfData() : next;
+            }
+            
+        };
     }
 }

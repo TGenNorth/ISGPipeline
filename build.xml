@@ -43,6 +43,7 @@
         <package-jar title="DetermineStatus"         main-class="isg.tools.DetermineStatus"/>
         <package-jar title="CalculateStatistics"    main-class="isg.tools.CalculateStatistics"/>
         <package-jar title="CalculateMismatch"      main-class="isg.tools.CalculateMismatch"/>
+        <package-jar title="CleanMatrix"      main-class="isg.tools.CleanMatrix"/>
         <package-jar title="FilterMatrix"           main-class="isg.tools.FilterMatrix"/>
         <package-jar title="ISGToolsBatchRunner"    main-class="isg.tools.ISGToolsBatchRunner"/>
         <package-jar title="RemoveGenomes"          main-class="isg.tools.RemoveGenomes"/>
