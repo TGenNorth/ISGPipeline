@@ -11,7 +11,7 @@
     <description>Builds, tests, and runs the project ISGPipeline.</description>
     <import file="nbproject/build-impl.xml"/>
     
-    <target name="-pre-init">
+    <target name="-post-init">
         <path id="classpath">
             <fileset dir="${dist.dir}/lib">
                 <include name="**/*.jar"/>
