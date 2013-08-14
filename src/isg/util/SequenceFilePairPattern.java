@@ -64,6 +64,22 @@ public class SequenceFilePairPattern {
         
         return new File(f.getParentFile(), sb.toString());
     }
+    
+    public boolean isFirst(File f){
+        return readGroupMatches(f, first);
+    }
+    
+    public boolean isSecond(File f){
+        return readGroupMatches(f, second);
+    }
+    
+    private boolean readGroupMatches(File f, String rg){
+        final Matcher m = pattern.matcher(f.getName());
+        if(m.find()){
+            return rg.equals(m.group(readGroup));
+        }
+        return false;
+    }
 
     public boolean matches(File f) {
         return pattern.matcher(f.getName()).matches();

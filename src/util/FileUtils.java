@@ -5,6 +5,7 @@
 package util;
 
 import java.io.File;
+import java.util.Collection;
 
 /**
  *
@@ -26,6 +27,14 @@ public class FileUtils {
 
     public static boolean exists(File f) {
         return f.exists() && f.length() > 0;
+    }
+    
+    public static File findFirstFileWithExtensions(File dir, String[] extensions){
+        Collection<File> files = org.apache.commons.io.FileUtils.listFiles(dir, extensions, false);
+        if(!files.isEmpty()){
+            return files.iterator().next();
+        }
+        return null;
     }
     
     public static File findFileUsingExtensions(File dir, String prefix, String[] extensions){

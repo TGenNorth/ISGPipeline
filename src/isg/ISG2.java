@@ -11,6 +11,7 @@ import isg.util.AlgorithmApplyingIterator;
 import isg.util.Filter;
 import isg.util.FilteringIterator;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -43,14 +44,10 @@ public class ISG2 extends CommandLineProgram {
 
     @Usage(programVersion = "0.6")
     public String USAGE = "";
-    @Option(doc = "Name of sample to include in analysis.", optional = false)
-    public List<String> SAMPLE;
+    @Option(doc = "Directory of sample to include in analysis.", optional = false)
+    public List<File> SAMPLE_DIR;
     @Option(doc = "Output directory.", optional = false)
     public File OUT_DIR;
-    @Option(doc = "Directory containing vcf files.", optional = false)
-    public File VCF_DIR;
-    @Option(doc = "Directory containing alignment coverage files.", optional = false)
-    public File COV_DIR;
     @Option(doc = "Reference sequence.", optional = false)
     public File REF;
     @Option(doc = "The ploidy of the genome", optional = false)
@@ -105,7 +102,6 @@ public class ISG2 extends CommandLineProgram {
 
         ReferenceSequenceFile refSeq = ReferenceSequenceFileFactory.getReferenceSequenceFile(REF);
         dict = refSeq.getSequenceDictionary();
-        final Set<String> keys = new HashSet<String>(SAMPLE);
 
         writeToFile(
                 filterUnambiguousSNPs(
@@ -114,7 +110,7 @@ public class ISG2 extends CommandLineProgram {
                 fixPloidy(
                 markAmbiguous(
                 filterSNPs(
-                createVCFIters(keys))))))));
+                createVCFIters())))))));
 
         return 0;
     }
@@ -136,7 +132,7 @@ public class ISG2 extends CommandLineProgram {
     }
 
     private Iterator<VariantContext> genotypeNoCalls(Iterator<VariantContext> iter) {
-        return new AlgorithmApplyingIterator<VariantContext, VariantContext>(iter, new GenotypeNoCalls(createGenotypers(new HashSet<String>(SAMPLE))));
+        return new AlgorithmApplyingIterator<VariantContext, VariantContext>(iter, new GenotypeNoCalls(createGenotypers()));
     }
 
     private Iterator<VariantContext> filterUnambiguousSNPs(Iterator<VariantContext> iter) {
@@ -144,7 +140,7 @@ public class ISG2 extends CommandLineProgram {
     }
 
     private void writeToFile(Iterator<VariantContext> iter) {
-        final VariantContextTabHeader vcHeader = new VariantContextTabHeader(Collections.EMPTY_LIST, new HashSet<String>(SAMPLE));
+        final VariantContextTabHeader vcHeader = new VariantContextTabHeader(Collections.EMPTY_LIST, getSampleNames());
         final VariantContextTabWriter allWriter = openFileForWriting(new File(OUT_DIR, ALL_VARIANTS_FILENAME));
 
         //write header
@@ -208,17 +204,17 @@ public class ISG2 extends CommandLineProgram {
         }
     }
 
-    private List<SingleSampleGenotyper> createGenotypers(Set<String> samplesToInclude) {
+    private List<SingleSampleGenotyper> createGenotypers() {
         final List<SingleSampleGenotyper> ret = new ArrayList<SingleSampleGenotyper>();
-        final String extensions[] = {".bed", ".interval_list"};
-        for (final String sample : samplesToInclude) {
-            File f = FileUtils.findFileUsingExtensions(COV_DIR, sample, extensions);
+        final String extensions[] = {"bed", "interval_list"};
+        for (final File sampleDir : SAMPLE_DIR) {
+            File f = FileUtils.findFirstFileWithExtensions(sampleDir, extensions);
             if (f == null) {
-                Logger.getLogger(ISG2.class.getName()).log(Level.WARNING, "Could not find coverage file for sample ''{0}''", sample);
+                Logger.getLogger(ISG2.class.getName()).log(Level.WARNING, "Could not find coverage file in directory: {0}", sampleDir);
             }
             try {
                 LociStateCaller lociStateCaller = (f == null ? LociStateCallerFactory.createEmptyStateCaller() : LociStateCallerFactory.createFromFile(f));
-                SingleSampleGenotyper ssg = new SingleSampleGenotyperImpl(sample, lociStateCaller);
+                SingleSampleGenotyper ssg = new SingleSampleGenotyperImpl(sampleDir.getName(), lociStateCaller);
                 ret.add(ssg);
             } catch (IOException ex) {
                 Logger.getLogger(ISG2.class.getName()).log(Level.SEVERE, null, ex);
@@ -227,31 +223,34 @@ public class ISG2 extends CommandLineProgram {
         return ret;
     }
 
-    private List<Iterator<VariantContext>> createVCFIters(Set<String> samplesToInclude) {
-        Set<String> leftoverSamples = new HashSet<String>(samplesToInclude);
+    private List<Iterator<VariantContext>> createVCFIters() {
         final List<Iterator<VariantContext>> ret = new ArrayList<Iterator<VariantContext>>();
-        for (final File f : VCF_DIR.listFiles()) {
-            if (!f.getName().endsWith(".vcf")) {
-                continue;
+        final String extensions[] = {"vcf"};
+        for (final File sampleDir : SAMPLE_DIR) {
+            File f = FileUtils.findFirstFileWithExtensions(sampleDir, extensions);
+            if (f == null) {
+                throw new IllegalStateException("Could not find vcf file in directory: " + sampleDir);
             }
             final FeatureReader<VariantContext> vcfReader = createVCFReader(f);
             final VCFHeader header = (VCFHeader) vcfReader.getHeader();
 
             List<String> samples = header.getGenotypeSamples();
-            if (!samplesToInclude.containsAll(samples)) {
-                continue;
-            } else if (samples.size() > 1) {
+            if (samples.size() > 1) {
                 throw new IllegalStateException("multiple genotype samples per vcf file is not supported: " + f.getAbsolutePath());
             } else if (samples.isEmpty()) {
                 throw new IllegalStateException("vcf file doesn't have any genotype samples: " + f.getAbsolutePath());
             }
-            leftoverSamples.removeAll(samples);
             Iterator<VariantContext> iter = getIteratorQuietly(vcfReader);
             ret.add(iter);
         }
-
-        if (!leftoverSamples.isEmpty()) {
-            throw new IllegalStateException("Could not find vcf files for the following samples: " + leftoverSamples);
+        
+        return ret;
+    }
+    
+    private Set<String> getSampleNames(){
+        final Set<String> ret = new HashSet<String>();
+        for (final File sampleDir : SAMPLE_DIR) {
+            ret.add(sampleDir.getName());
         }
         return ret;
     }

@@ -10,9 +10,11 @@ import org.broadinstitute.sting.queue.extensions.gatk.FastaStats
 import org.broadinstitute.sting.queue.extensions.picard.AddOrReplaceReadGroups
 import org.broadinstitute.sting.queue.extensions.picard.MarkDuplicates
 import bwa._
+import isg.input._
 import isg.util.SequenceFilePair
 import isg.util.SequenceFilePairMatcher
 import isg.util.SequenceFilePairPattern
+import isg.util.SequenceFilePairPatterns
 import java.util.Arrays
 import java.util.Properties
 import mummer._
@@ -100,19 +102,19 @@ class ISGPipelineQScript extends QScript {
   var mummerDir: File = _
   var readsDir: File = _
   var bamsDir: File = _
-  var bamsTmpDir: File = _
   var vcfDir: File = _
   var covDir: File = _
   var outDir: File = _
   var gbkDir: File = _
   var dupsDir: File = _
+  var samplesOutDir: File = _
+  var refOutDir: File = _
+  var inputResourceManager: InputResourceManager = _
   var typedProperties: TypedProperties = new TypedProperties()
   
   def init() {
-    if(!isgRoot.exists){
-      isgRoot.mkdirs
-    }
-    referenceFile = new File(isgRoot, "ref.fasta")
+    mkdir(isgRoot)
+    
     fastaDir = mkdir(new File(isgRoot, "fastas"))
     mummerDir = mkdir(new File(isgRoot, "mummer"))
     readsDir = mkdir(new File(isgRoot, "reads"))
@@ -122,26 +124,33 @@ class ISGPipelineQScript extends QScript {
     outDir = mkdir(new File(isgRoot, "out"))
     gbkDir = mkdir(new File(isgRoot, "genBank"))
     dupsDir = mkdir(new File(isgRoot, "dups"))
+    samplesOutDir = mkdir(new File(outDir, "samples"))
+    refOutDir = mkdir(new File(outDir, "ref"))
+    referenceFile = new File(isgRoot, "ref.fasta")
     
-    bamsTmpDir = new File(bamsDir, "tmp")
-    bamsTmpDir.mkdir
+    val sequencePatterns = new SequenceFilePairPatterns(PATTERNS)
+    val inputResourceManagerBuilder = new InputResourceManagerBuilder(sequencePatterns)   
+    inputResourceManagerBuilder.addFilesInDir(readsDir)
+    inputResourceManagerBuilder.addFilesInDir(bamsDir)
+    inputResourceManagerBuilder.addFilesInDir(vcfDir)
+    inputResourceManagerBuilder.addFilesInDir(fastaDir)
+    inputResourceManager = inputResourceManagerBuilder.build
     
-    //add bams
-    for(bam : File <- bamsDir.listFiles){
-      if(bam.getName.endsWith(".bam")) addBam(bam)
+    //make a output and tmp directory for each sample
+    for(sample : String <- inputResourceManager.samples){
+      val sampleDir = new File(samplesOutDir, sample)
+      mkdir(new File(samplesOutDir, sample))
+      mkdir(new File(sampleDir, "tmp"))
     }
     
-    //add vcfs
-    for(vcf : File <- vcfDir.listFiles){
-      if(vcf.getName.endsWith(".vcf")){
-        addVcf(vcf)
-        addSample(GenomicFileUtils.extractFirstSampleName(vcf))
-      }
-    }
-    
-    //add fastas
-    for(fasta : File <- fastaDir.listFiles){
-      if(fasta.getName.endsWith(".fasta")) addFasta(fasta)
+    //copy vcf files to sample directory
+    val vcfResources = inputResourceManager.getResources(classOf[VCFInputResource])
+    for (vcfResource: VCFInputResource <- vcfResources){
+      val sample = vcfResource.getSample
+      val sampleDir = mkdir(new File(samplesOutDir, sample))
+      val vcfSource = vcfResource.getVcfFile
+      val vcfDest = new File(sampleDir, sample + ".vcf")
+      FileUtils.copyFile(vcfSource, vcfDest)
     }
     
     //remove *.done files from outDir
@@ -158,6 +167,7 @@ class ISGPipelineQScript extends QScript {
     if(referenceFile.exists){
       add(new CreateDict(referenceFile))
       add(new CreateFAI(referenceFile))
+      if(pathToBWA!=null) add(new BWAIndex(referenceFile))
     }
   }
   
@@ -184,9 +194,9 @@ class ISGPipelineQScript extends QScript {
     init
     bwa
     mummer
-    callSnpsAndCalculateCoverageOnBams
+    callSnpsAndLoci
     
-    if(!VCF_FILES.isEmpty){
+    if(!inputResourceManager.samples.isEmpty){
       val all = new File(outDir, "all.variants.txt");
       val allFinal = new File(outDir, "all.variants.final.txt");
       
@@ -201,35 +211,37 @@ class ISGPipelineQScript extends QScript {
     if(pathToMummer==null) return
     
     val ref = stripExtension(referenceFile)
-    val prefix = mummerDir.getPath + "/" + ref + "_" + ref
-    val coords = new File(mummerDir, ref + "_" + ref + ".coords")
-    val refDups = new File(dupsDir, ref + ".interval_list")
+    val prefix = refOutDir.getPath + "/" + ref + "_" + ref
+    val coords = new File(refOutDir, ref + "_" + ref + ".coords")
+    val refDups = new File(refOutDir, ref + ".interval_list")
     
     add(new Nucmer(referenceFile, referenceFile, prefix, true, true))
     add(new CoordsDup(coords, referenceFile, refDups))
     addDups(refDups)
     
-    val fastas = FileUtils.listFiles(fastaDir, Array("fasta"), false)
-    for (fasta <- fastas){
-      val sampleName = GenomicFileUtils.extractFirstSampleName(fasta)
-      val prefix = mummerDir.getPath + "/" + sampleName + "_" + sampleName
-      val selfCoords = new File(mummerDir, sampleName + "_" + sampleName + ".coords")
-      val refCoords = new File(mummerDir, ref + "_" + sampleName + ".coords")
-      val dups = new File(dupsDir, sampleName + ".interval_list")
-      val cov = new File(covDir, sampleName + ".interval_list")
-      val vcf = new File(vcfDir, sampleName + ".vcf")
+    val fastas = inputResourceManager.getResources(classOf[FASTAInputResource])
+    for (fastaResource: FASTAInputResource <- fastas){
+      val sampleName = fastaResource.getSample
+      val fasta = fastaResource.getFastaFile
+      val sampleDir = new File(samplesOutDir, sampleName)
+      val prefix = sampleDir.getPath + "/" + sampleName + "_" + sampleName
+      val selfCoords = new File(sampleDir, sampleName + "_" + sampleName + ".coords")
+      val refCoords = new File(sampleDir, ref + "_" + sampleName + ".coords")
+      val dups = new File(sampleDir, sampleName + ".interval_list")
+      val cov = new File(sampleDir, sampleName + ".interval_list")
+      val vcf = new File(sampleDir, sampleName + ".vcf")
       
       //find snps in both directions
-      val refSnps = mummer(referenceFile, fasta, false)
-      val qrySnps = mummer(fasta, referenceFile, true)
+      val refSnps = mummer(sampleDir, referenceFile, fasta, false)
+      val qrySnps = mummer(sampleDir, fasta, referenceFile, true)
       add(new ToVcf(refSnps, qrySnps, vcf, sampleName))
-      addVcf(vcf)
-      addSample(sampleName)
       
       //find dups
       add(new CoordsCov(refCoords, referenceFile, cov))
       add(new Nucmer(fasta, fasta, prefix, true, true))
       add(new FindParalogs(selfCoords, refCoords, referenceFile, dups))
+      addVcf(vcf)
+      addCov(cov)
       addDups(dups)
     }
   }
@@ -237,8 +249,8 @@ class ISGPipelineQScript extends QScript {
   /**
    * Add commands for mummer
    */
-  def mummer(ref: File, qry: File, sortByQry: Boolean): File = {
-    val prefix = mummerDir.getPath + "/" + stripExtension(ref) + "_" + stripExtension(qry)
+  def mummer(sampleDir: File, ref: File, qry: File, sortByQry: Boolean): File = {
+    val prefix = sampleDir.getPath + "/" + stripExtension(ref) + "_" + stripExtension(qry)
     val delta = new File(prefix + ".delta")
     val filtered = new File(prefix + ".filtered.delta")
     val snps = new File(prefix + ".snps")
@@ -256,61 +268,65 @@ class ISGPipelineQScript extends QScript {
     if(pathToBWA==null) return;
     
     val prefix = referenceFile.getPath
-    add(new BWAIndex(referenceFile))
     
-    val pairMatcher = new SequenceFilePairMatcher(PATTERNS)
-    val pairs = asScalaIterator[SequenceFilePair](pairMatcher.process(readsDir).iterator) 
-    for (pair <- pairs){
+    val fastqs = inputResourceManager.getResources(classOf[FASTQInputResource])
+    for (fastqResource: FASTQInputResource <- fastqs){
       
-      val sample = pair.getName
-      val fastq1 = pair.getSeq1
-      val fastq2 = pair.getSeq2
-      val sam = bwa(prefix, sample, fastq1, fastq2)
-      val rgBam = new File(bamsTmpDir, sample + ".rg.bam")
-      val targetIntervals = new File(bamsTmpDir, sample + ".intervals")
-      val realignedBam = new File(bamsTmpDir, sample + ".realigned.bam")
-      val uniqueBam = new File(bamsDir, sample + ".bam")
+      val sample = fastqResource.getSample
+      val reads = fastqResource.getReadsFile
+      val mates = fastqResource.getMatesFile
+      val sampleDir = new File(samplesOutDir, sample)
+      val sampleTmpDir = new File(sampleDir, "tmp")
       
+      val sam = new File(sampleTmpDir, sample + ".sam")
+      val sai1 = new File(sampleTmpDir, sample + "_1.sai")
+      val sai2 = new File(sampleTmpDir, sample + "_2.sai")
+      val rgBam = new File(sampleTmpDir, sample + ".rg.bam")
+      val targetIntervals = new File(sampleTmpDir, sample + ".intervals")
+      val realignedBam = new File(sampleTmpDir, sample + ".realigned.bam")
+      val uniqueBam = new File(sampleDir, sample + ".bam")
+      
+      if(useBWAMem){
+        add(new BWAMem(prefix, reads, mates, sam))
+      }else{
+        add(new BWAAln(prefix, reads, sai1))
+        if(mates!=null){ //paired-end
+          add(new BWAAln(prefix, mates, sai2))
+          add(new BWASampe(prefix, sai1, sai2, reads, mates, sam))
+        }else{ //single-end
+          add(new BWASamse(prefix, sai1, reads, sam))
+        }
+      }
       add(new AddRG(sam, rgBam, sample))
       add(new RealignerTargetCreator(rgBam, referenceFile, targetIntervals))
       add(new IndelRealigner(rgBam, targetIntervals, referenceFile, realignedBam))
       add(new RMDups(realignedBam, uniqueBam))
-      addBam(uniqueBam)
-      addSample(sample)
-    
+      callSnpsAndLoci(sample, uniqueBam)
     }
   }
   
-  def bwa(prefix: String, sample: String, fastq1: File, fastq2: File): File = {
-    val sam = new File(bamsTmpDir, sample + ".sam")  
-    if(useBWAMem){
-      add(new BWAMem(prefix, fastq1, fastq2, sam))
-    }else{
-      val sai1 = new File(bamsTmpDir, sample + "_1.sai")
-      val sai2 = new File(bamsTmpDir, sample + "_2.sai")
-      add(new BWAAln(prefix, fastq1, sai1))
-      if(fastq2!=null){ //paired-end
-        add(new BWAAln(prefix, fastq2, sai2))
-        add(new BWASampe(prefix, sai1, sai2, fastq1, fastq2, sam))
-      }else{ //single-end
-        add(new BWASamse(prefix, sai1, fastq1, sam))
-      }
-    }   
-    return sam
-  }
-  
-  def callSnpsAndCalculateCoverageOnBams() {
+  def callSnpsAndLoci() {
     if(gatkJarFile==null) return
-    for(bam : File <- BAM_FILES){
-      val sample = GenomicFileUtils.extractFirstSampleName(bam)
-      val vcf = new File(vcfDir, sample + ".vcf")
-      val bed = new File(covDir, sample + ".bed")
-      add(new UG(bam, referenceFile, vcf))
-      add(new CallableLoci(bam, referenceFile, bed))
-      addCov(bed)
-      addVcf(vcf)
-      addSample(sample)
+    
+    val bams = inputResourceManager.getResources(classOf[BAMInputResource])
+    for (bamResource: BAMInputResource <- bams){
+      val sample = bamResource.getSample
+      val bam = bamResource.getBamFile
+      callSnpsAndLoci(sample, bam)
     }
+  }
+  
+  def callSnpsAndLoci(sample: String, bam: File) {
+    if(gatkJarFile==null) return
+
+    val sampleDir = new File(samplesOutDir, sample)
+    val vcf = new File(sampleDir, sample + ".vcf")
+    val bed = new File(sampleDir, sample + ".bed")
+    
+    add(new UG(bam, referenceFile, vcf))
+    add(new CallableLoci(bam, referenceFile, bed))
+    addVcf(vcf)
+    addCov(bed)
   }
   
   def stripExtension(f: File): String = {
@@ -500,13 +516,19 @@ class ISGPipelineQScript extends QScript {
     @Input var vcfFiles: Seq[File] = VCF_FILES.toSeq
     @Input var covFiles: Seq[File] = COV_FILES.toSeq
     @Output val allOut: File = new File(outDir, "all.variants.txt")
+    var sampleDirs: List[String] = Nil
+
+    override def freezeFieldValues() {
+      super.freezeFieldValues()
+      for(sample : String <- inputResourceManager.samples){
+        sampleDirs = new File(samplesOutDir, sample) :: sampleDirs
+      }
+    }
     
     override def commandLine = super.commandLine + 
-      repeat("SAMPLE=", SAMPLES, spaceSeparated=false) +
+      repeat("SAMPLE_DIR=", sampleDirs, spaceSeparated=false) +
       required("OUT_DIR="+outDir) +
       required("REF="+ref) +
-      required("VCF_DIR="+vcfDir) +
-      required("COV_DIR="+covDir) +
       optional("PLOIDY="+ploidy) +
       optional("MIN_AF="+minAF) +
       optional("MIN_QUAL="+minQual) +
