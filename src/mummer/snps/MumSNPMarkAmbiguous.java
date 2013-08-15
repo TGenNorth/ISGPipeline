@@ -44,25 +44,23 @@ class MumSNPMarkAmbiguous extends AbstractMergingIterator<VariantContext, Varian
                 return recordsToMerge.get(0);
         }
     }
-    
-    public VariantContext makeAmbiguous(VariantContext vc){
+
+    public static VariantContext makeAmbiguous(VariantContext vc) {
         List<Genotype> genotypes = new ArrayList<Genotype>();
         Set<Allele> alleles = new HashSet<Allele>();
-        
-        alleles.add(vc.getReference());
-        alleles.add(Allele.create("N"));
-        for(Genotype g: vc.getGenotypes()){
-            genotypes.add(GenotypeBuilder.create(g.getSampleName(), Arrays.asList(Allele.create("N"))));
+
+        Allele alt = Allele.create("N");
+        if (vc.getReference().basesMatch(alt)) {
+            alt = vc.getReference();
         }
         
-        return new VariantContextBuilder()
-                .alleles(alleles)
-                .genotypes(genotypes)
-                .chr(vc.getChr())
-                .start(vc.getStart())
-                .log10PError(vc.getLog10PError())
-                .attributes(vc.getAttributes())
-                .stop(vc.getEnd()).make();
-    }
+        alleles.add(vc.getReference());
+        alleles.add(alt);
+        
+        for (Genotype g : vc.getGenotypes()) {
+            genotypes.add(GenotypeBuilder.create(g.getSampleName(), Arrays.asList(alt)));
+        }
 
+        return new VariantContextBuilder().alleles(alleles).genotypes(genotypes).chr(vc.getChr()).start(vc.getStart()).log10PError(vc.getLog10PError()).attributes(vc.getAttributes()).stop(vc.getEnd()).make();
+    }
 }

@@ -29,6 +29,21 @@ public class MumSNPMarkAmbiguousTest {
 
     public MumSNPMarkAmbiguousTest() {
     }
+    
+    @Test
+    public void testMakeAmbiguous() {
+        System.out.println("makeAmbiguous");
+        
+        VariantContext vc = VariantContextTestUtils.createSNP(1, "A1", "abc", "N", "T");
+        
+        VariantContext result = MumSNPMarkAmbiguous.makeAmbiguous(vc);
+        VariantContext expResult = new VariantContextBuilder("", "A1", 1, 1, Collections.EMPTY_LIST)
+                .alleles(Arrays.asList(Allele.create("N", true)))
+                .genotypes(new GenotypeBuilder("abc", Arrays.asList(Allele.create("N", true))).make())
+                .make();
+        VariantContextTestUtils.assertVariantContextEquals(result, expResult);
+
+    }
 
     @Test
     public void testMergeFull() {
