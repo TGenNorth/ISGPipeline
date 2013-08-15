@@ -227,7 +227,7 @@ class ISGPipelineQScript extends QScript {
       val prefix = sampleDir.getPath + "/" + sampleName + "_" + sampleName
       val selfCoords = new File(sampleDir, sampleName + "_" + sampleName + ".coords")
       val refCoords = new File(sampleDir, ref + "_" + sampleName + ".coords")
-      val dups = new File(sampleDir, sampleName + ".interval_list")
+      val dups = new File(sampleDir, sampleName + ".dups")
       val cov = new File(sampleDir, sampleName + ".interval_list")
       val vcf = new File(sampleDir, sampleName + ".vcf")
       
