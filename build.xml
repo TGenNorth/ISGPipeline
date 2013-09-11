@@ -20,7 +20,7 @@
     </target>
     
     <target name="-post-jar">
-        <property name="version.num" value="0.16.8" />
+        <property name="version.num" value="0.16.8-1" />
 <!--        <buildnumber file="build.num" />-->
         <tstamp>
             <format property="NOW" pattern="yyyy-MM-dd HH:mm:ss z" />

@@ -63,6 +63,7 @@ public class ISG2 extends CommandLineProgram {
     @Option(doc = "Process indels.", optional = false)
     public boolean INDEL = false;
     public static final String ALL_VARIANTS_FILENAME = "all.variants.txt";
+    public static final String AMBIGUOUS_VARIANTS_FILENAME = "ambiguous.variants.txt";
     private SAMSequenceDictionary dict;
     private static final String AMBIGUOUS_CALL_STRING = "N";
     private static final Allele AMBIGUOUS_CALL = Allele.create(AMBIGUOUS_CALL_STRING);
@@ -104,13 +105,12 @@ public class ISG2 extends CommandLineProgram {
         dict = refSeq.getSequenceDictionary();
 
         writeToFile(
-                filterUnambiguousSNPs(
                 genotypeNoCalls(
                 mergeSNPs(
                 fixPloidy(
                 markAmbiguous(
                 filterSNPs(
-                createVCFIters())))))));
+                createVCFIters()))))));
 
         return 0;
     }
@@ -142,15 +142,22 @@ public class ISG2 extends CommandLineProgram {
     private void writeToFile(Iterator<VariantContext> iter) {
         final VariantContextTabHeader vcHeader = new VariantContextTabHeader(Collections.EMPTY_LIST, getSampleNames());
         final VariantContextTabWriter allWriter = openFileForWriting(new File(OUT_DIR, ALL_VARIANTS_FILENAME));
-
+        final VariantContextTabWriter ambiguousWriter = openFileForWriting(new File(OUT_DIR, AMBIGUOUS_VARIANTS_FILENAME));
+        
         //write header
         allWriter.writeHeader(vcHeader);
+        ambiguousWriter.writeHeader(vcHeader);
 
         long written = 0;
         System.out.println("processing...");
         while (iter.hasNext()) {
             VariantContext vc = iter.next();
-            allWriter.add(vc);
+            if(UNAMBIGUOUS_FILTER.pass(vc)){
+                allWriter.add(vc);
+            }else{
+                ambiguousWriter.add(vc);
+            }
+            
             if (++written % 100000 == 0) {
                 System.out.println("Written " + written + " records.");
             }
@@ -158,6 +165,7 @@ public class ISG2 extends CommandLineProgram {
 
         //close writers
         allWriter.close();
+        ambiguousWriter.close();
     }
 
     /**
