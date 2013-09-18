@@ -19,20 +19,16 @@ public class InputResourceManager {
     private final Map<String, InputResource> resources;
     
     protected InputResourceManager(Map<String, InputResource> resources){
-        this.resources = resources;
+        this.resources = new HashMap<String, InputResource>(resources);
     }
     
     public Set<String> samples(){
         return resources.keySet();
     }
     
-    public <T extends InputResource> List<T> getResources(Class<T> clazz){
-        List<T> ret = new ArrayList<T>();
-        for(InputResource resource: resources.values()){
-            if(clazz.isInstance(resource)){
-                ret.add((T)resource);
-            }
+    public void applyAll(InputResourceVisitor visitor){
+        for(InputResource inputResource: resources.values()){
+            inputResource.apply(visitor);
         }
-        return ret;
     }
 }

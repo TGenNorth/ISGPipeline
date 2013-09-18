@@ -4,16 +4,16 @@
  */
 package isg.input;
 
+import java.io.File;
+
 /**
  *
  * @author jbeckstrom
  */
-public interface InputResource <T> {
+public interface InputResourceFactory <T> {
     
-    public String sampleName();
+    public boolean isResourceType(File f);
     
-    public T resource();
-    
-    public void apply(InputResourceVisitor visitor);
+    public InputResource<T> create(File f);
     
 }

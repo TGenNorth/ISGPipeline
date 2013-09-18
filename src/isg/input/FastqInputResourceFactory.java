@@ -8,54 +8,60 @@ import isg.util.SequenceFilePairPattern;
 import isg.util.SequenceFilePairPatterns;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import org.broadinstitute.sting.utils.collections.Pair;
+import util.FileUtils;
+import util.GenomicFileUtils;
 
 /**
  *
  * @author jbeckstrom
  */
-public class FASTQInputResources {
-    
-    private final List<FASTQInputResource> resources = new ArrayList<FASTQInputResource>();
+public class FastqInputResourceFactory implements InputResourceFactory {
+
     private final Map<String, File> fastqsInWaiting = new HashMap<String, File>();
     private final SequenceFilePairPatterns patterns;
-    
-    public FASTQInputResources(SequenceFilePairPatterns patterns){
+
+    public FastqInputResourceFactory(SequenceFilePairPatterns patterns) {
         this.patterns = patterns;
     }
     
-    public void addFile(File fastq) throws IOException {
+    @Override
+    public boolean isResourceType(File f) {
+        final String filename = f.getName();
+        return (filename.endsWith(".fastq") 
+                || filename.endsWith(".gz")
+                || filename.endsWith(".txt"));
+    }
+
+    @Override
+    public InputResource<?> create(File fastq) {
         SequenceFilePairPattern pattern = patterns.findPattern(fastq);
         if (pattern == null) {
             //single end
-            resources.add(FASTQInputResource.create(fastq));
+            final String sampleName = FileUtils.stripExtension(fastq);
+            return new FastqInputResource(sampleName, fastq);
         } else {
             //try to find matching pairs
             final String filename = fastq.getName();
             if (fastqsInWaiting.containsKey(filename)) {
                 final File fastq2 = fastqsInWaiting.remove(filename);
-                final String sample = pattern.sample(fastq);
+                final String sampleName = pattern.sample(fastq);
+                Pair<File, File> pair = null;
                 if (pattern.isFirst(fastq2)) {
-                    resources.add(new FASTQInputResource(sample, fastq2, fastq));
+                    pair = new Pair<File, File>(fastq2, fastq);
                 } else {
-                    resources.add(new FASTQInputResource(sample, fastq, fastq2));
+                    pair = new Pair<File, File>(fastq, fastq2);
                 }
+                return new FastqPairInputResource(sampleName, pair);
             } else {
                 //matching pair doesn't exist yet, so store it for later
                 final String otherFilename = pattern.other(fastq).getName();
                 fastqsInWaiting.put(otherFilename, fastq);
+                return null;
             }
         }
     }
     
-    public List<FASTQInputResource> getResources(){
-        return resources;
-    }
-    
-    public boolean isPending(){
-        return !fastqsInWaiting.isEmpty();
-    }
 }
