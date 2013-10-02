@@ -28,11 +28,22 @@ import mummer.snps.MumSnpToVcf
 import org.apache.commons.io.FileUtils
 import util.TypedProperties
 import util.GenomicFileUtils
+import org.broadinstitute.sting.commandline.Hidden
 
 class ISGPipelineQScript extends QScript {
 
-  @Input(doc="The analysis directory.", shortName="isg")
+  @Hidden //deprecated, use input, output, ref instead
+  @Input(doc="The analysis directory.", shortName="isg", exclusiveOf="I,O,R", required=false)
   var isgRoot: File = null
+  
+  @Input(doc="Directory containing input files (fastqs, fastas, bams, etc)", shortName="I", fullName="input_dir", exclusiveOf="isg")
+  var inputDir: File = null
+  
+  @Input(doc="Directory where output files will be written", shortName="O", fullName="output_dir", exclusiveOf="isg")
+  var outputDir: File = null
+  
+  @Input(doc="Reference sequence file.", shortName="R", fullName="reference_sequence", exclusiveOf="isg")
+  var referenceSequence: File = null
   
   @Argument(doc="Path to GATK jar file", shortName="gatk", required=false)
   var gatkJarFile: File = null
@@ -74,55 +85,54 @@ class ISGPipelineQScript extends QScript {
   
   var VCF_FILES: Set[File] = Set()
   var COV_FILES: Set[File] = Set()
-  var BAM_FILES: Set[File] = Set()
-  var FASTA_FILES: Set[File] = Set()
   var DUPS_FILES: Set[File] = Set()
-  var SAMPLES: Set[String] = Set()
   
   def addVcf(vcf: File) { VCF_FILES += vcf }
   def addCov(cov: File) { COV_FILES += cov }
-  def addBam(bam: File) { BAM_FILES += bam }
-  def addFasta(fasta: File) { FASTA_FILES += fasta }
   def addDups(dups: File) { DUPS_FILES += dups }
-  def addSample(sample: String) { SAMPLES += sample }
   
   trait UNIVERSAL_GATK_ARGS extends GATKCommandLineFunction {
     this.jarFile = gatkJarFile;
     this.allowPotentiallyMisencodedQuals = allow_potentially_misencoded_quality_scores;
   }
   
-  var referenceFile: File = _
   var fastaDir: File = _
   var mummerDir: File = _
   var readsDir: File = _
   var bamsDir: File = _
   var vcfDir: File = _
   var covDir: File = _
-  var outDir: File = _
   var gbkDir: File = _
   var dupsDir: File = _
-  var samplesOutDir: File = _
-  var refOutDir: File = _
+  var samplesoutputDir: File = _
+  var refoutputDir: File = _
   var typedProperties: TypedProperties = new TypedProperties()
   
   def init() {
-    mkdir(isgRoot)
     
-    fastaDir = mkdir(new File(isgRoot, "fastas"))
-    mummerDir = mkdir(new File(isgRoot, "mummer"))
-    readsDir = mkdir(new File(isgRoot, "reads"))
-    bamsDir = mkdir(new File(isgRoot, "bams"))
-    vcfDir = mkdir(new File(isgRoot, "vcf"))
-    covDir = mkdir(new File(isgRoot, "coverage"))
-    outDir = mkdir(new File(isgRoot, "out"))
-    gbkDir = mkdir(new File(isgRoot, "genBank"))
-    dupsDir = mkdir(new File(isgRoot, "dups"))
-    samplesOutDir = mkdir(new File(outDir, "samples"))
-    refOutDir = mkdir(new File(outDir, "ref"))
-    referenceFile = new File(isgRoot, "ref.fasta")
+    if(isgRoot!=null){
+      mkdir(isgRoot)
+      
+      fastaDir = mkdir(new File(isgRoot, "fastas"))
+      mummerDir = mkdir(new File(isgRoot, "mummer"))
+      readsDir = mkdir(new File(isgRoot, "reads"))
+      bamsDir = mkdir(new File(isgRoot, "bams"))
+      vcfDir = mkdir(new File(isgRoot, "vcf"))
+      covDir = mkdir(new File(isgRoot, "coverage"))
+      gbkDir = mkdir(new File(isgRoot, "genBank"))
+      dupsDir = mkdir(new File(isgRoot, "dups"))
+      referenceSequence = new File(isgRoot, "ref.fasta")
+      outputDir = mkdir(new File(isgRoot, "out"))
+    }else{
+      mkdir(outputDir)
+    }
     
-    //remove *.done files from outDir
-    for(outFile : File <- outDir.listFiles){
+    samplesoutputDir = mkdir(new File(outputDir, "samples"))
+    refoutputDir = mkdir(new File(outputDir, "ref"))
+    
+    
+    //remove *.done files from outputDir
+    for(outFile : File <- outputDir.listFiles){
       if(outFile.getName.endsWith(".done")) outFile.delete
     }
     
@@ -153,6 +163,7 @@ class ISGPipelineQScript extends QScript {
    */
   def script() {
 
+    //initialize
     init
     initRef
     
@@ -172,10 +183,14 @@ class ISGPipelineQScript extends QScript {
     inputResourceManagerBuilder.addFactory(new FastqInputResourceFactory(sequencePatterns))
     
     //add input files
-    inputResourceManagerBuilder.addDir(fastaDir)
-    inputResourceManagerBuilder.addDir(readsDir)
-    inputResourceManagerBuilder.addDir(bamsDir)
-    inputResourceManagerBuilder.addDir(vcfDir)
+    if(inputDir != null){
+      inputResourceManagerBuilder.addDir(inputDir)
+    }else{
+      inputResourceManagerBuilder.addDir(fastaDir)
+      inputResourceManagerBuilder.addDir(readsDir)
+      inputResourceManagerBuilder.addDir(bamsDir)
+      inputResourceManagerBuilder.addDir(vcfDir)
+    }
     val inputResourceManager: InputResourceManager = inputResourceManagerBuilder.build
     
     //prepare input files for isg
@@ -184,15 +199,15 @@ class ISGPipelineQScript extends QScript {
     
     //add isg
     if(!inputResourceManager.samples.isEmpty){
-      val all = new File(outDir, "all.variants.txt");
-      val allFinal = new File(outDir, "all.variants.final.txt");
+      val all = new File(outputDir, "all.variants.txt");
+      val allFinal = new File(outputDir, "all.variants.final.txt");
       
       var sampleDirs: List[File] = List()      
       for(sample : String <- inputResourceManager.samples){
-        sampleDirs = new File(samplesOutDir, sample) :: sampleDirs
+        sampleDirs = new File(samplesoutputDir, sample) :: sampleDirs
       }
       
-      add(new ISG(referenceFile, sampleDirs))
+      add(new ISG(referenceSequence, sampleDirs))
       add(new BatchRunner(all, allFinal))
       if(!DUPS_FILES.isEmpty) add(new FilterDups(allFinal, DUPS_FILES.toSeq))
     }
@@ -200,19 +215,19 @@ class ISGPipelineQScript extends QScript {
   }
   
   def initRef() {
-    if(!referenceFile.exists) return;
+    if(!referenceSequence.exists) return;
     
     //run mummer on reference
-    val filename = stripExtension(referenceFile)
-    val prefix = refOutDir.getPath + "/" + filename + "_" + filename
-    val coords = new File(refOutDir, filename + "_" + filename + ".coords")
-    val refDups = new File(refOutDir, filename + ".interval_list")
+    val filename = stripExtension(referenceSequence)
+    val prefix = refoutputDir.getPath + "/" + filename + "_" + filename
+    val coords = new File(refoutputDir, filename + "_" + filename + ".coords")
+    val refDups = new File(refoutputDir, filename + ".interval_list")
 
-    add(new Nucmer(referenceFile, referenceFile, prefix, true, true))
-    add(new CoordsDup(coords, referenceFile, refDups))
-    add(new CreateDict(referenceFile))
-    add(new CreateFAI(referenceFile))
-    if(pathToBWA!=null) add(new BWAIndex(referenceFile))
+    add(new Nucmer(referenceSequence, referenceSequence, prefix, true, true))
+    add(new CoordsDup(coords, referenceSequence, refDups))
+    add(new CreateDict(referenceSequence))
+    add(new CreateFAI(referenceSequence))
+    if(pathToBWA!=null) add(new BWAIndex(referenceSequence))
     addDups(refDups)
   }
   
@@ -223,7 +238,7 @@ class ISGPipelineQScript extends QScript {
       val sample = resource.sampleName
       val vcf = resource.resource
       
-      val sampleDir = new File(samplesOutDir, sample)
+      val sampleDir = new File(samplesoutputDir, sample)
       if(!sampleDir.exists) sampleDir.mkdir
       
       //copy vcf to out directory
@@ -266,10 +281,10 @@ class ISGPipelineQScript extends QScript {
     def mummer(sampleName: String, fasta: File) {
       if(pathToMummer==null) return
 
-      val sampleDir = new File(samplesOutDir, sampleName)
+      val sampleDir = new File(samplesoutputDir, sampleName)
       if(!sampleDir.exists) sampleDir.mkdir
       
-      val ref = stripExtension(referenceFile)
+      val ref = stripExtension(referenceSequence)
       val prefix = sampleDir.getPath + "/" + sampleName + "_" + sampleName
       val selfCoords = new File(sampleDir, sampleName + "_" + sampleName + ".coords")
       val refCoords = new File(sampleDir, ref + "_" + sampleName + ".coords")
@@ -278,14 +293,14 @@ class ISGPipelineQScript extends QScript {
       val vcf = new File(sampleDir, sampleName + ".vcf")
 
       //find snps in both directions
-      val refSnps = mummer(sampleDir, referenceFile, fasta, false)
-      val qrySnps = mummer(sampleDir, fasta, referenceFile, true)
+      val refSnps = mummer(sampleDir, referenceSequence, fasta, false)
+      val qrySnps = mummer(sampleDir, fasta, referenceSequence, true)
       add(new ToVcf(refSnps, qrySnps, vcf, sampleName))
 
       //find dups
-      add(new CoordsCov(refCoords, referenceFile, cov))
+      add(new CoordsCov(refCoords, referenceSequence, cov))
       add(new Nucmer(fasta, fasta, prefix, true, true))
-      add(new FindParalogs(selfCoords, refCoords, referenceFile, dups))
+      add(new FindParalogs(selfCoords, refCoords, referenceSequence, dups))
       addVcf(vcf)
       addCov(cov)
       addDups(dups)
@@ -306,13 +321,13 @@ class ISGPipelineQScript extends QScript {
     
     //add bwa functions
     def bwa(sample: String, reads: File, mates: File) : File = {
-      val sampleDir = new File(samplesOutDir, sample)
+      val sampleDir = new File(samplesoutputDir, sample)
       if(!sampleDir.exists) sampleDir.mkdir
       
       val sampleTmpDir = new File(sampleDir, "tmp")
       if(!sampleTmpDir.exists) sampleTmpDir.mkdir
       
-      val prefix = referenceFile.getPath
+      val prefix = referenceSequence.getPath
       val sai1 = new File(sampleTmpDir, sample + "_1.sai")
       val sai2 = new File(sampleTmpDir, sample + "_2.sai")
       val sam = new File(sampleTmpDir, sample + ".sam")
@@ -336,8 +351,8 @@ class ISGPipelineQScript extends QScript {
       
       //post-processing of bam
       add(new AddRG(sam, rgBam, sample))
-      add(new RealignerTargetCreator(rgBam, referenceFile, targetIntervals))
-      add(new IndelRealigner(rgBam, targetIntervals, referenceFile, realignedBam))
+      add(new RealignerTargetCreator(rgBam, referenceSequence, targetIntervals))
+      add(new IndelRealigner(rgBam, targetIntervals, referenceSequence, realignedBam))
       add(new RMDups(realignedBam, uniqueBam))
       
       return uniqueBam
@@ -345,14 +360,14 @@ class ISGPipelineQScript extends QScript {
     
     //add snp and loci calling functions
     def callSnpsAndLoci(sample: String, bam: File) {
-      val sampleDir = new File(samplesOutDir, sample)
+      val sampleDir = new File(samplesoutputDir, sample)
       if(!sampleDir.exists) sampleDir.mkdir
       
       val vcf = new File(sampleDir, sample + ".vcf")
       val bed = new File(sampleDir, sample + ".bed")
 
-      add(new UG(bam, referenceFile, vcf))
-      add(new CallableLoci(bam, referenceFile, bed))
+      add(new UG(bam, referenceSequence, vcf))
+      add(new CallableLoci(bam, referenceSequence, bed))
       addVcf(vcf)
       addCov(bed)
     }
@@ -467,12 +482,12 @@ class ISGPipelineQScript extends QScript {
   }
   
   class ToVcf(refSnps: File, qrySnps: File, out: File, sample: String) extends MumSnpToVcf {
-    @Input val dict: File = swapExt(referenceFile.getParent, referenceFile, ".fasta", ".dict")
+    @Input val dict: File = swapExt(referenceSequence.getParent, referenceSequence, ".fasta", ".dict")
     this.refSnpsFile = refSnps
     this.querySnpsFile = qrySnps
     this.output = out
     this.sampleName = sample
-    this.referenceSequence = referenceFile
+    this.referenceSequence = referenceSequence
   }
   
   class CoordsCov(coords: File, ref: File, out: File) extends CoordsCoverageInProcessFunction {
@@ -545,11 +560,11 @@ class ISGPipelineQScript extends QScript {
     javaMainClass = "isg.ISG2"
     @Input var vcfFiles: Seq[File] = VCF_FILES.toSeq
     @Input(required = false) var covFiles: Seq[File] = COV_FILES.toSeq
-    @Output val allOut: File = new File(outDir, "all.variants.txt")
+    @Output val allOut: File = new File(outputDir, "all.variants.txt")
     
     override def commandLine = super.commandLine + 
       repeat("SAMPLE_DIR=", sampleDirs, spaceSeparated=false) +
-      required("OUT_DIR="+outDir) +
+      required("OUT_DIR="+outputDir) +
       required("REF="+ref) +
       optional("PLOIDY="+ploidy) +
       optional("MIN_AF="+minAF) +
@@ -562,15 +577,15 @@ class ISGPipelineQScript extends QScript {
   class FilterDups(@Input inMatrix: File, @Input inFilter: Seq[File]) extends JavaCommandLineFunction {
     analysisName = "filterMatrix"
     javaMainClass = "isg.tools.FilterMatrix"
-    @Output val uniqueOut: File = new File(outDir, "unique.variants.txt")
-    @Output val dupsOut: File = new File(outDir, "dups.variants.txt")
+    @Output val uniqueOut: File = new File(outputDir, "unique.variants.txt")
+    @Output val dupsOut: File = new File(outputDir, "dups.variants.txt")
     
     override def commandLine = super.commandLine + 
       required("INPUT="+inMatrix) + 
       repeat("FILTER=", inFilter, spaceSeparated=false) +
       required("INCLUSIVE_OUT="+dupsOut) + 
       required("EXCLUSIVE_OUT="+uniqueOut) + 
-      required("REFERENCE_SEQUENCE="+referenceFile)
+      required("REFERENCE_SEQUENCE="+referenceSequence)
   }
   
   class BatchRunner(@Input in: File, @Output out: File) extends JavaCommandLineFunction {
@@ -578,7 +593,7 @@ class ISGPipelineQScript extends QScript {
     javaMainClass = "isg.tools.ISGToolsBatchRunner"
     
     override def commandLine = super.commandLine + required("INPUT="+in) + required("OUTPUT="+out) +
-      required("REFERENCE_SEQUENCE="+referenceFile) + required("GBK_DIR="+gbkDir)
+      required("REFERENCE_SEQUENCE="+referenceSequence) + required("GBK_DIR="+gbkDir)
   }
   
   class FindParalogs(@Input selfCoords: File, @Input refCoords: File, @Input ref: File, @Output out: File) extends JavaCommandLineFunction {
