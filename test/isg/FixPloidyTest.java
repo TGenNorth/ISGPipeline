@@ -61,7 +61,7 @@ public class FixPloidyTest {
                 .alleles(Arrays.asList(Allele.create("A", true), Allele.create("T")))
                 .genotypes(new GenotypeBuilder("S1", Arrays.asList(Allele.create("T"), Allele.create("T"))).make())
                 .make();
-        FixPloidy instance = new FixPloidy(1);
+        FixPloidy instance = new FixPloidy(.75);
         VariantContext expResult = new VariantContextBuilder("", "chr1", 1, 1, Collections.EMPTY_LIST)
                 .alleles(Arrays.asList(Allele.create("A", true), Allele.create("T")))
                 .genotypes(new GenotypeBuilder("S1", Arrays.asList(Allele.create("T"))).make())
@@ -76,20 +76,44 @@ public class FixPloidyTest {
     @Test
     public void testFixPloidy() {
         System.out.println("fixPloidy");
-        Genotype genotypeToFix = new GenotypeBuilder("chr1", Arrays.asList(Allele.create("A"), Allele.create("A"))).make();
-        FixPloidy instance = new FixPloidy(1);
+        FixPloidy instance = new FixPloidy(.75);
+        Genotype genotypeToFix = new GenotypeBuilder("chr1", Arrays.asList(Allele.create("A"), Allele.create("G")))
+                .AD(new int[]{0,8,2})
+                .make();
+        VariantContext vc = new VariantContextBuilder("", "chr1", 1, 1, Collections.EMPTY_LIST)
+                .alleles(Arrays.asList(Allele.create("T", true), Allele.create("A"), Allele.create("G")))
+                .genotypes(genotypeToFix)
+                .make();
         Genotype expResult = new GenotypeBuilder("chr1", Arrays.asList(Allele.create("A"))).make();
-        Genotype result = instance.fixPloidy(genotypeToFix);
+        Genotype result = instance.fixPloidy(genotypeToFix, vc);
+        assertTrue(expResult.sameGenotype(result));
+        
+        genotypeToFix = new GenotypeBuilder("chr1", Arrays.asList(Allele.create("A"), Allele.create("G")))
+                .AD(new int[]{0,2,8})
+                .make();
+        expResult = new GenotypeBuilder("chr1", Arrays.asList(Allele.create("G"))).make();
+        result = instance.fixPloidy(genotypeToFix, vc);
+        assertTrue(expResult.sameGenotype(result));
+        
+        genotypeToFix = new GenotypeBuilder("chr1", Arrays.asList(Allele.create("A"), Allele.create("G"), Allele.create("T", true)))
+                .AD(new int[]{8,1,1})
+                .make();
+        expResult = new GenotypeBuilder("chr1", Arrays.asList(Allele.create("T", true))).make();
+        result = instance.fixPloidy(genotypeToFix, vc);
         assertTrue(expResult.sameGenotype(result));
     }
     
     @Test
     public void testFixPloidyThowException() {
         System.out.println("fixPloidyThowException");
-        Genotype genotypeToFix = new GenotypeBuilder("chr1", Arrays.asList(Allele.create("A"), Allele.create("T"))).make();
-        FixPloidy instance = new FixPloidy(1);
+        Genotype genotypeToFix = new GenotypeBuilder("chr1", Arrays.asList(Allele.create("A"), Allele.create("T", true))).make();
+        VariantContext vc = new VariantContextBuilder("", "chr1", 1, 1, Collections.EMPTY_LIST)
+                .alleles(Arrays.asList(Allele.create("A"), Allele.create("T", true)))
+                .genotypes(genotypeToFix)
+                .make();
+        FixPloidy instance = new FixPloidy(.75);
         exception.expect(IllegalStateException.class);
-        instance.fixPloidy(genotypeToFix);
+        instance.fixPloidy(genotypeToFix, vc);
     }
 
     /**
@@ -102,7 +126,7 @@ public class FixPloidyTest {
                 new GenotypeBuilder("chr1", Arrays.asList(Allele.create("A"), Allele.create("A"))).make(),
                 new GenotypeBuilder("chr1", Arrays.asList(Allele.create("A"), Allele.create("T"))).make()
         );
-        FixPloidy instance = new FixPloidy(1);
+        FixPloidy instance = new FixPloidy(.75);
         Set<Allele> expResult = new HashSet<Allele>();
         Collections.addAll(expResult, Allele.create("A"), Allele.create("T"));
         Set<Allele> result = instance.getUniqueCallableAlleles(genotypes);

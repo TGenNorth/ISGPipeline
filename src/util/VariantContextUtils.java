@@ -21,4 +21,25 @@ public class VariantContextUtils {
         return uniqueAlleles.size();
     }
     
+    public static double[] calculateAlleleFrequency(Genotype g){
+        if(!g.hasAD()){
+            return null;
+        }
+        int[] ad = g.getAD();
+        double[] af = new double[ad.length];
+        int dp = sum(ad);
+        for(int i=0; i<ad.length; i++){
+            af[i] = (double) ad[i]/dp;
+        }
+        return af;
+    }
+    
+    private static int sum(int[] nums){
+        int sum = 0;
+        for(int num: nums){
+            sum += num;
+        }
+        return sum;
+    }
+    
 }

@@ -20,21 +20,24 @@ import org.broadinstitute.variant.variantcontext.Genotype;
 import org.broadinstitute.variant.variantcontext.GenotypeBuilder;
 import org.broadinstitute.variant.variantcontext.VariantContext;
 import org.broadinstitute.variant.variantcontext.VariantContextBuilder;
+import util.VariantContextUtils;
 
 /**
  * "Fixes" the ploidy by reducing the number of alleles in each Genotype object
- * of a VariantContext to that of the specified ploidy. This is necessary because
- * the ploidy used by UG is set artificially high in order to genotype "ambiguous"
- * variants that would be assumed the reference if the ploidy was set correctly.
+ * of a VariantContext to that of the specified ploidy (currently only supports haploid). 
+ * This is necessary because the ploidy used by UG is set artificially high in 
+ * order to genotype "ambiguous" variants that would be assumed the reference if 
+ * the ploidy was set correctly.
  * 
  * @author jbeckstrom
  */
 public class FixPloidy implements Algorithm<VariantContext, VariantContext> {
 
-    private final int targetPloidy;
+    private final int targetPloidy = 1;
+    private final double minAF;
 
-    public FixPloidy(final int aPloidy) {
-        this.targetPloidy = aPloidy;
+    public FixPloidy(final double minAF) {
+        this.minAF = minAF;
     }
 
     /*
@@ -49,7 +52,7 @@ public class FixPloidy implements Algorithm<VariantContext, VariantContext> {
 
         final List<Genotype> genotypes = new ArrayList<Genotype>();
         for(Genotype g: vc.getGenotypes()){
-            genotypes.add(fixPloidy(g));
+            genotypes.add(fixPloidy(g, vc));
         }
         
         final Set<Allele> alleles = new HashSet<Allele>();
@@ -59,10 +62,25 @@ public class FixPloidy implements Algorithm<VariantContext, VariantContext> {
         return new VariantContextBuilder().alleles(alleles).genotypes(genotypes).chr(vc.getChr()).start(vc.getStart()).stop(vc.getEnd()).make();
     }
     
-    public Genotype fixPloidy(final Genotype genotypeToFix){
+    /*
+     * "Fixes" the ploidy by comparing each unique allele's frequency against 
+     * the minimum allele frequency (minAF) specified when constructing the class. 
+     * Alleles that are at or above minAF are used in the new genotype returned 
+     * by this function.
+     */
+    public Genotype fixPloidy(final Genotype genotypeToFix, final VariantContext vc){
         String sample = genotypeToFix.getSampleName();
-        Set<Allele> alleles = new HashSet<Allele>(genotypeToFix.getAlleles());
+        double[] af = VariantContextUtils.calculateAlleleFrequency(genotypeToFix);
+        Set<Allele> alleles = new HashSet<Allele>();
+        for(Allele allele: genotypeToFix.getAlleles()){
+            int index = vc.getAlleleIndex(allele);
+            if(af==null || af[index]>=minAF){
+                alleles.add(allele);
+            }
+        }
         if(alleles.size()!=1){
+            //should never get here because any genotype with more than one unique 
+            //allele above the minAF threshold will be marked ambiguous.
             throw new IllegalStateException("Cannot fix ploidy of genotype with more than one unique allele: "+genotypeToFix);
         }
         return GenotypeBuilder.create(sample, new ArrayList<Allele>(alleles));

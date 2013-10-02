@@ -50,7 +50,7 @@ class ISGPipelineQScript extends QScript {
   var ploidy: java.lang.Integer = 1
   
   @Argument(doc="The minimum allele frequency of an alternative base needed to call a variant.", required=false)
-  var minAF: Float = 1.0F
+  var minAF: Float = 0.75F
   
   @Argument(doc="The minimum Phred scaled probability needed to call a variant.", required=false)
   var minQual: java.lang.Integer = 30

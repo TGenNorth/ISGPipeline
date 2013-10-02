@@ -10,6 +10,7 @@ import isg.util.Algorithm;
 import isg.util.AlgorithmApplyingIterator;
 import isg.util.Filter;
 import isg.util.FilteringIterator;
+import isg.util.SequenceFilePairPattern;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -32,6 +33,7 @@ import org.broad.tribble.FeatureReader;
 import org.broadinstitute.variant.variantcontext.Allele;
 import org.broadinstitute.variant.variantcontext.VariantContext;
 import org.broad.tribble.TribbleIndexedFeatureReader;
+import org.broadinstitute.variant.variantcontext.Genotype;
 import org.broadinstitute.variant.vcf.VCFCodec;
 import org.broadinstitute.variant.vcf.VCFHeader;
 import util.FileUtils;
@@ -53,7 +55,7 @@ public class ISG2 extends CommandLineProgram {
     @Option(doc = "The ploidy of the genome", optional = false)
     public int PLOIDY = 1;
     @Option(doc = "The minimum allele frequency of an alternative base needed to call a SNP.", optional = false)
-    public float MIN_AF = 1.0F;
+    public double MIN_AF = .75F;
     @Option(doc = "The minimum Phred scaled probability needed to call a SNP", optional = false)
     public int MIN_QUAL = 30;
     @Option(doc = "The minimum genotype quality needed to call a SNP.", optional = false)
@@ -94,7 +96,24 @@ public class ISG2 extends CommandLineProgram {
         }
     };
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+//        File f = new File("/Users/jbeckstrom/Desktop/Pseudomonas/Pisi_080428.vcf");
+//        FeatureReader<VariantContext> reader = new TribbleIndexedFeatureReader<VariantContext>(f.getAbsolutePath(), new VCFCodec(), false);
+//        Iterator<VariantContext> iter = reader.iterator();
+//        int count = 0;
+//        while(iter.hasNext()){
+//            VariantContext vc = iter.next();
+//            Genotype g = vc.getGenotype(0);
+//            System.out.println(g.getPloidy());
+//            for(Allele a: g.getAlleles()){
+//                System.out.println(a.getBaseString());
+//            }
+//            if(count>2){
+//                break;
+//            }
+//            count++;
+//        }
+        
         System.exit(new ISG2().instanceMain(args));
     }
 
@@ -124,7 +143,7 @@ public class ISG2 extends CommandLineProgram {
     }
 
     private List<Iterator<VariantContext>> fixPloidy(List<Iterator<VariantContext>> iters) {
-        return applyAlgorithm(iters, new FixPloidy(PLOIDY));
+        return applyAlgorithm(iters, new FixPloidy(MIN_AF));
     }
 
     private Iterator<VariantContext> mergeSNPs(List<Iterator<VariantContext>> iters) {
@@ -143,7 +162,7 @@ public class ISG2 extends CommandLineProgram {
         final VariantContextTabHeader vcHeader = new VariantContextTabHeader(Collections.EMPTY_LIST, getSampleNames());
         final VariantContextTabWriter allWriter = openFileForWriting(new File(OUT_DIR, ALL_VARIANTS_FILENAME));
         final VariantContextTabWriter ambiguousWriter = openFileForWriting(new File(OUT_DIR, AMBIGUOUS_VARIANTS_FILENAME));
-        
+
         //write header
         allWriter.writeHeader(vcHeader);
         ambiguousWriter.writeHeader(vcHeader);
@@ -152,12 +171,12 @@ public class ISG2 extends CommandLineProgram {
         System.out.println("processing...");
         while (iter.hasNext()) {
             VariantContext vc = iter.next();
-            if(UNAMBIGUOUS_FILTER.pass(vc)){
+            if (UNAMBIGUOUS_FILTER.pass(vc)) {
                 allWriter.add(vc);
-            }else{
+            } else {
                 ambiguousWriter.add(vc);
             }
-            
+
             if (++written % 100000 == 0) {
                 System.out.println("Written " + written + " records.");
             }
@@ -251,11 +270,11 @@ public class ISG2 extends CommandLineProgram {
             Iterator<VariantContext> iter = getIteratorQuietly(vcfReader);
             ret.add(iter);
         }
-        
+
         return ret;
     }
-    
-    private Set<String> getSampleNames(){
+
+    private Set<String> getSampleNames() {
         final Set<String> ret = new HashSet<String>();
         for (final File sampleDir : SAMPLE_DIR) {
             ret.add(sampleDir.getName());

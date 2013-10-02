@@ -36,41 +36,26 @@ public class MarkAmbiguous implements Algorithm<VariantContext, VariantContext> 
     
     @Override
     public VariantContext apply(VariantContext vc) {
-        if (VariantContextUtils.countUniqueAlleles(vc.getGenotype(0)) > info.maxNumAlt
-                || (vc.hasLog10PError() && vc.getPhredScaledQual() < info.minQual)
+        if ((vc.hasLog10PError() && vc.getPhredScaledQual() < info.minQual)
                 || (vc.getGenotype(0).hasGQ() && vc.getGenotype(0).getGQ() < info.minGQ)
                 || (vc.hasAttribute(VCFConstants.DEPTH_KEY) && vc.getAttributeAsInt(VCFConstants.DEPTH_KEY, -1) < info.minDP)
-                || isBelowMinAF(vc)) {
+                || isBelowMinAF(vc.getGenotype(0))) {
             return makeAmbiguous(vc);
         }
         return vc;
     }
     
-    public boolean isBelowMinAF(VariantContext vc){
-        if(!vc.hasAttribute(VCFConstants.ALLELE_FREQUENCY_KEY)){
+    public boolean isBelowMinAF(Genotype g){
+        if(!g.hasAD()){
             return false;
         }
-        Object obj = vc.getAttribute(VCFConstants.ALLELE_FREQUENCY_KEY);
-        //AF field can have more than one value so check for a Collection first
-        if(obj instanceof Collection<?>){
-            Collection<?> values = (Collection<?>)obj;
-            for(Object value: values){
-                if(isDoubleBelowMinValue(value, info.minAF)){
-                    return true;
-                }
+        double[] af = VariantContextUtils.calculateAlleleFrequency(g);
+        for(int i=1; i<af.length; i++){
+            if(af[i]>=info.minAF){
+                return false;
             }
-            return false;
-        }else{
-            return isDoubleBelowMinValue(obj, info.minAF);
         }
-    }
-    
-    public boolean isDoubleBelowMinValue(Object value, double minValue){
-        if(value instanceof Double){
-            return (Double)value < minValue;
-        }else{
-            return Double.valueOf((String)value) < minValue;
-        }
+        return true;
     }
     
     public VariantContext makeAmbiguous(VariantContext vc){

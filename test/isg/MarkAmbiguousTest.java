@@ -33,7 +33,7 @@ public class MarkAmbiguousTest {
     
     private final MarkAmbiguousInfo info = new MarkAmbiguousInfo.Builder()
                 .maxNumAlt(1)
-                .minAF(1.0)
+                .minAF(.75)
                 .minDP(10)
                 .minGQ(10)
                 .minQual(17)
@@ -100,21 +100,38 @@ public class MarkAmbiguousTest {
     public void testApplyMinAF() {
         System.out.println("applyMinAF");
         MarkAmbiguous instance = new MarkAmbiguous(info);
-        Map<String, Object> attr = new HashMap<String,Object>();
-        attr.put("AF", 0.5);
         
-        VariantContext expResult = createSNP("C", "N", attr);
-        VariantContext result = instance.apply(createSNP("C", "G", attr));
+        Genotype genotype = new GenotypeBuilder("chr1", Arrays.asList(Allele.create("A")))
+                .AD(new int[]{3,7})
+                .make();
+        VariantContext vc = new VariantContextBuilder("", "chr1", 1, 1, Collections.EMPTY_LIST)
+                .alleles(Arrays.asList(Allele.create("T", true), Allele.create("A")))
+                .genotypes(genotype)
+                .make();
+        VariantContext expResult = new VariantContextBuilder("", "chr1", 1, 1, Collections.EMPTY_LIST)
+                .alleles(Arrays.asList(Allele.create("T", true), Allele.create("N")))
+                .genotypes(new GenotypeBuilder("chr1", Arrays.asList(Allele.create("N"))).make())
+                .make();
+        
+        VariantContext result = instance.apply(vc);
         assertVariantContextEquals(expResult, result);
+    }
+    
+    @Test
+    public void testApplyMinAF2() {
+        System.out.println("applyMinAF2");
+        MarkAmbiguous instance = new MarkAmbiguous(info);
         
-        attr.put("AF", 1.0);
-        expResult = createSNP("C", "G", attr);
-        result = instance.apply(createSNP("C", "G", attr));
-        assertVariantContextEquals(expResult, result);
+        Genotype genotype = new GenotypeBuilder("chr1", Arrays.asList(Allele.create("A")))
+                .AD(new int[]{2,8})
+                .make();
+        VariantContext vc = new VariantContextBuilder("", "chr1", 1, 1, Collections.EMPTY_LIST)
+                .alleles(Arrays.asList(Allele.create("T", true), Allele.create("A")))
+                .genotypes(genotype)
+                .make();
+        VariantContext expResult = vc;
         
-        attr.put("AF", Arrays.asList("1.0", "0.5"));
-        expResult = createSNP("C", "N", attr);
-        result = instance.apply(createSNP("C", "G", attr));
+        VariantContext result = instance.apply(vc);
         assertVariantContextEquals(expResult, result);
     }
     
@@ -131,24 +148,6 @@ public class MarkAmbiguousTest {
         
         expResult = createSNP("C", "G", Collections.EMPTY_MAP, -1.7);
         result = instance.apply(createSNP("C", "G", Collections.EMPTY_MAP, -1.7));
-        assertVariantContextEquals(expResult, result);
-        
-    }
-    
-    /**
-     * Test of apply method, of class CallAmbiguous with a max number of alternate alleles cutoff.
-     */
-    @Test
-    public void testApplyMaxNumAlt() {
-        System.out.println("applyMaxNumAlt");
-        MarkAmbiguous instance = new MarkAmbiguous(info);
-        VariantContext expResult = createSNP("C", "N");
-        VariantContext result = instance.apply(createSNP("C", Arrays.asList(Allele.create("G"), Allele.create("T"))));
-        assertVariantContextEquals(expResult, result);
-        
-        Allele ref = Allele.create("C", true);
-        expResult = createSNP("C", "N");
-        result = instance.apply(createSNP(ref, Arrays.asList(Allele.create("G"), ref)));
         assertVariantContextEquals(expResult, result);
         
     }
@@ -182,27 +181,27 @@ public class MarkAmbiguousTest {
         
     }
     
-    @Test
-    public void testIsBelowMinAF() {
-        System.out.println("isBelowMinAF");
-        MarkAmbiguous instance = new MarkAmbiguous(info);
-        Map<String, Object> attr = new HashMap<String,Object>();
-        attr.put("AF", 0.5);
-        VariantContext vc = createSNP("C", "N", attr);
-        assertTrue(instance.isBelowMinAF(vc));
-        
-        attr.put("AF", Arrays.asList("1.0", "1.0"));
-        vc = createSNP("C", "N", attr);
-        assertFalse(instance.isBelowMinAF(vc));
-        
-        attr.put("AF", Arrays.asList("1.0", "0.5"));
-        vc = createSNP("C", "N", attr);
-        assertTrue(instance.isBelowMinAF(vc));
-        
-        attr.clear();
-        vc = createSNP("C", "N", attr);
-        assertFalse(instance.isBelowMinAF(vc));
-    }
+//    @Test
+//    public void testIsBelowMinAF() {
+//        System.out.println("isBelowMinAF");
+//        MarkAmbiguous instance = new MarkAmbiguous(info);
+//        Map<String, Object> attr = new HashMap<String,Object>();
+//        attr.put("AF", 0.5);
+//        VariantContext vc = createSNP("C", "N", attr);
+//        assertTrue(instance.isBelowMinAF(vc));
+//        
+//        attr.put("AF", Arrays.asList("1.0", "1.0"));
+//        vc = createSNP("C", "N", attr);
+//        assertFalse(instance.isBelowMinAF(vc));
+//        
+//        attr.put("AF", Arrays.asList("1.0", "0.5"));
+//        vc = createSNP("C", "N", attr);
+//        assertTrue(instance.isBelowMinAF(vc));
+//        
+//        attr.clear();
+//        vc = createSNP("C", "N", attr);
+//        assertFalse(instance.isBelowMinAF(vc));
+//    }
     
     
 }
