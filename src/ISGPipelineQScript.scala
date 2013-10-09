@@ -57,19 +57,20 @@ class ISGPipelineQScript extends QScript {
   @Argument(doc="Path to options file.", required=false)
   var optionsFile: File = null
   
+  @Hidden
   @Argument(doc="Ploidy", required=false)
   var ploidy: java.lang.Integer = 1
   
-  @Argument(doc="The minimum allele frequency of an alternative base needed to call a variant.", required=false)
+  @Argument(doc="The minimum allele frequency of an alternative base needed to call a variant. Default value: 0.75", required=false)
   var minAF: Float = 0.75F
   
-  @Argument(doc="The minimum Phred scaled probability needed to call a variant.", required=false)
+  @Argument(doc="The minimum Phred scaled probability needed to call a variant. Default value: 30", required=false)
   var minQual: java.lang.Integer = 30
   
-  @Argument(doc="The minimum genotype quality needed to call a variant.", required=false)
+  @Argument(doc="The minimum genotype quality needed to call a variant. Default value: 4", required=false)
   var minGQ: java.lang.Integer = 4
   
-  @Argument(doc="The minimum depth of reads needed to call a variant.", required=false) 
+  @Argument(doc="The minimum depth of reads needed to call a variant. Default value: 3", required=false) 
   var minDP: java.lang.Integer = 3
   
   @Argument(doc="Do not fail when encountering base qualities that are too high "+
@@ -77,6 +78,7 @@ class ISGPipelineQScript extends QScript {
             "of the BAM file", required=false)
   var allow_potentially_misencoded_quality_scores: Boolean = false
   
+  @Hidden
   @Argument(doc="Include indels in final output.", required=false)
   var includeIndels: Boolean = false
   
