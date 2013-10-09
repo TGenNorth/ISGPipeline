@@ -48,7 +48,7 @@ class ISGPipelineQScript extends QScript {
   @Argument(doc="Path to GATK jar file", shortName="gatk", required=false)
   var gatkJarFile: File = null
   
-  @Argument(doc="Path to bwa executable.", shortName="bwa", required=false)
+  @Argument(doc ="Path to bwa executable.", shortName="bwa", required=false)
   var pathToBWA: String = null
   
   @Argument(doc="Path to mummer directory.", shortName="mummer", required=false)
@@ -84,6 +84,9 @@ class ISGPipelineQScript extends QScript {
   
   @Argument(doc="Run bwa mem algorithm.", required=false)
   var useBWAMem: Boolean = false
+  
+  @Argument(doc="Include pattern fields in output matrix.", required=false)
+  var includePattern: Boolean = false
   
   var VCF_FILES: Set[File] = Set()
   var COV_FILES: Set[File] = Set()
@@ -195,6 +198,8 @@ class ISGPipelineQScript extends QScript {
     }
     val inputResourceManager: InputResourceManager = inputResourceManagerBuilder.build
     
+    System.out.println(referenceSequence.getParent)
+    
     //prepare input files for isg
     val visitor = new InputResourceVisitorImpl()
     inputResourceManager.applyAll(visitor)
@@ -209,8 +214,13 @@ class ISGPipelineQScript extends QScript {
         sampleDirs = new File(samplesoutputDir, sample) :: sampleDirs
       }
       
+      var programs = Array("CalculateMismatch", "DetermineStatus", "ClassifyMatrix")
+      if(includePattern){
+        programs +:= "CalculatePattern"
+      }
+      
       add(new ISG(referenceSequence, sampleDirs))
-      add(new BatchRunner(all, allFinal))
+      add(new BatchRunner(all, allFinal, programs))
       if(!DUPS_FILES.isEmpty) add(new FilterDups(allFinal, DUPS_FILES.toSeq))
     }
     
@@ -297,7 +307,7 @@ class ISGPipelineQScript extends QScript {
       //find snps in both directions
       val refSnps = mummer(sampleDir, referenceSequence, fasta, false)
       val qrySnps = mummer(sampleDir, fasta, referenceSequence, true)
-      add(new ToVcf(refSnps, qrySnps, vcf, sampleName))
+      add(new ToVcf(refSnps, qrySnps, vcf, sampleName, referenceSequence))
 
       //find dups
       add(new CoordsCov(refCoords, referenceSequence, cov))
@@ -483,13 +493,13 @@ class ISGPipelineQScript extends QScript {
     this.showIndels = true
   }
   
-  class ToVcf(refSnps: File, qrySnps: File, out: File, sample: String) extends MumSnpToVcf {
-    @Input val dict: File = swapExt(referenceSequence.getParent, referenceSequence, ".fasta", ".dict")
+  class ToVcf(refSnps: File, qrySnps: File, out: File, sample: String, ref: File) extends MumSnpToVcf {
+    @Input val dict: File = swapExt(ref.getParent, ref, ".fasta", ".dict")
     this.refSnpsFile = refSnps
     this.querySnpsFile = qrySnps
     this.output = out
     this.sampleName = sample
-    this.referenceSequence = referenceSequence
+    this.referenceSequence = ref
   }
   
   class CoordsCov(coords: File, ref: File, out: File) extends CoordsCoverageInProcessFunction {
@@ -590,12 +600,16 @@ class ISGPipelineQScript extends QScript {
       required("REFERENCE_SEQUENCE="+referenceSequence)
   }
   
-  class BatchRunner(@Input in: File, @Output out: File) extends JavaCommandLineFunction {
+  class BatchRunner(@Input in: File, @Output out: File, programs: Seq[String]) extends JavaCommandLineFunction {
     analysisName = "isgToolsBatchRunner"
     javaMainClass = "isg.tools.ISGToolsBatchRunner"
     
-    override def commandLine = super.commandLine + required("INPUT="+in) + required("OUTPUT="+out) +
-      required("REFERENCE_SEQUENCE="+referenceSequence) + required("GBK_DIR="+gbkDir)
+    override def commandLine = super.commandLine + 
+      required("INPUT="+in) + 
+      required("OUTPUT="+out) +
+      required("REFERENCE_SEQUENCE="+referenceSequence) + 
+      required("GBK_DIR="+gbkDir) +
+      repeat("PROGRAM=", programs, spaceSeparated=false)
   }
   
   class FindParalogs(@Input selfCoords: File, @Input refCoords: File, @Input ref: File, @Output out: File) extends JavaCommandLineFunction {
