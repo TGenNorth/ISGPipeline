@@ -1,4 +1,4 @@
-/*
+  /*
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
@@ -206,9 +206,14 @@ class ISGPipelineQScript extends QScript {
     
     //add isg
     if(!inputResourceManager.samples.isEmpty){
-      val all = new File(outputDir, "all.variants.txt");
-      val allFinal = new File(outputDir, "all.variants.final.txt");
-      
+      val all = new File(outputDir, "all.variants.txt")
+      val allFasta = new File(outputDir, "all.variants.fasta")
+      val allFinal = new File(outputDir, "all.variants.final.txt")
+      val unique = new File(outputDir, "unique.variants.txt")
+      val uniqueFasta = new File(outputDir, "unique.variants.fasta")
+      val dups = new File(outputDir, "dups.variants.txt")
+      val dupsFasta = new File(outputDir, "dups.variants.fasta")
+    
       var sampleDirs: List[File] = List()      
       for(sample : String <- inputResourceManager.samples){
         sampleDirs = new File(samplesoutputDir, sample) :: sampleDirs
@@ -220,8 +225,13 @@ class ISGPipelineQScript extends QScript {
       }
       
       add(new ISG(referenceSequence, sampleDirs))
+      add(new FormatForTree(all, allFasta))
       add(new BatchRunner(all, allFinal, programs))
-      if(!DUPS_FILES.isEmpty) add(new FilterDups(allFinal, DUPS_FILES.toSeq))
+      if(!DUPS_FILES.isEmpty){ 
+        add(new FilterDups(allFinal, DUPS_FILES.toSeq, unique, dups))
+        add(new FormatForTree(unique, uniqueFasta))
+        add(new FormatForTree(dups, dupsFasta))
+      }
     }
     
   }
@@ -586,17 +596,15 @@ class ISGPipelineQScript extends QScript {
       optional("INDEL="+includeIndels)
   }
   
-  class FilterDups(@Input inMatrix: File, @Input inFilter: Seq[File]) extends JavaCommandLineFunction {
+  class FilterDups(@Input inMatrix: File, @Input inFilter: Seq[File], @Output unique: File, @Output dups: File) extends JavaCommandLineFunction {
     analysisName = "filterMatrix"
     javaMainClass = "isg.tools.FilterMatrix"
-    @Output val uniqueOut: File = new File(outputDir, "unique.variants.txt")
-    @Output val dupsOut: File = new File(outputDir, "dups.variants.txt")
     
     override def commandLine = super.commandLine + 
       required("INPUT="+inMatrix) + 
       repeat("FILTER=", inFilter, spaceSeparated=false) +
-      required("INCLUSIVE_OUT="+dupsOut) + 
-      required("EXCLUSIVE_OUT="+uniqueOut) + 
+      required("INCLUSIVE_OUT="+dups) + 
+      required("EXCLUSIVE_OUT="+unique) + 
       required("REFERENCE_SEQUENCE="+referenceSequence)
   }
   
@@ -622,6 +630,15 @@ class ISGPipelineQScript extends QScript {
       required("SELF_COORDS="+selfCoords) + 
       required("REF_COORDS="+refCoords) +
       required("REFERENCE_SEQUENCE="+ref) + 
+      required("OUTPUT="+out)
+  }
+  
+  class FormatForTree(@Input in: File, @Output out: File) extends JavaCommandLineFunction {
+    analysisName = "FormatForTree"
+    javaMainClass = "isg.tools.FormatForTree"
+    
+    override def commandLine = super.commandLine + 
+      required("INPUT="+in) +  
       required("OUTPUT="+out)
   }
   
