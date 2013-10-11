@@ -5,6 +5,7 @@
 package isg.tools;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashSet;
@@ -87,6 +88,13 @@ public class ISGToolsBatchRunner extends CommandLineProgram {
     @Option
     public List<Program> PROGRAM = CollectionUtil.makeList(Program.values());
 
+    private static FilenameFilter GBK_FILENAME_FILTER = new FilenameFilter(){
+
+        @Override
+        public boolean accept(File file, String string) {
+            return string.endsWith(".gbk") || string.endsWith(".gb");
+        }
+    };
     // Stock main method
     public static void main(final String[] args) {
         new ISGToolsBatchRunner().instanceMainWithExit(args);
@@ -99,7 +107,7 @@ public class ISGToolsBatchRunner extends CommandLineProgram {
         File output = createTempFile("isg");
         int count = 0;
         Set<Program> programs = new HashSet<Program>(PROGRAM);
-        if(GBK_DIR==null || GBK_DIR.list().length==0){
+        if(GBK_DIR==null || GBK_DIR.list(GBK_FILENAME_FILTER).length==0){
             programs.remove(Program.ClassifyMatrix);
         }
         for (Program program : programs) {

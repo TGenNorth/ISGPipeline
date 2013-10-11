@@ -9,8 +9,19 @@ package isg.input;
  * @author jbeckstrom
  */
 public enum InputResourceType {
-    BAM,
-    FASTQ, //single fastq file
-    FASTQ_PAIR, //two fastq files
-    IGNORE;
+    BAM(".bam"),
+    FASTQ(".fastq", ".fastq.gz", "sequence.txt", "sequence.txt.gz"),
+    VCF(".vcf"),
+    FASTA(".fasta", ".fa"),
+    GENBANK(".gb", ".gbk");
+    
+    private InputResourceType(String... extensions){
+        this.extensions = extensions;
+    }
+
+    public String[] getExtensions() {
+        return extensions;
+    }
+    
+    private String[] extensions;
 }

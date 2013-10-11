@@ -130,6 +130,7 @@ class ISGPipelineQScript extends QScript {
       outputDir = mkdir(new File(isgRoot, "out"))
     }else{
       mkdir(outputDir)
+      gbkDir = inputDir
     }
     
     samplesoutputDir = mkdir(new File(outputDir, "samples"))
