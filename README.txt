@@ -10,26 +10,14 @@ mummer.
 ISGTools is a collection of java command line utilities that manipulate/annotate the 
 results of ISGPipeline. To find out more read the README in the isgtools directory.
 
---------------------------------------------------------------------------------
---PROCESSES--
---------------------------------------------------------------------------------
-
-SNP calling -
-ISGPipeline will run the UnifiedGenotyper on each bam file. 
-//TODO Explain how UnifiedGenotyper is run
-
-SNP calling on input sequence files will be done using MUMmer.
-
-coverage
-ISGPipeline will calculate coverage for each genome. For bams, an area will be 
-considered covered if it has at least MIN_COVERAGE (default value is 3) reads. For 
-fastas, an locus will be considered covered if it aligns to the reference using MUMmer.
-
-
 
 --------------------------------------------------------------------------------
 --RUNNING ISGPipeline--
 --------------------------------------------------------------------------------
+
+First, make sure that you have all the dependencies installed on your machine. 
+Please review the DEPENDENCIES section of the README to find out what programs 
+are required and where to get them.
 
 To get a listing of optional/required arguments type the following:
 
@@ -38,111 +26,77 @@ java -jar ISGPipeline.jar -S ISGPipelineQScript.scala
 
 Steps to run an analysis:
 
-1. To initialize a project, create an empty directory and run ISGPipeline using 
-the required arguments.
+Step 1:  
+    
+    Organize all of your input files (i.e. fastas, fastqs, etc) into a single 
+    directory. If you're not sure what file types are acceptable please refer to 
+    the "INPUT FILES" section of this README. 
 
-ex. java -jar ISGPipeline.jar -S ISGPipelineQScript.scala \
--isg analysis1 \
--run
+Step 2:
+  
+    Run ISGPipeline. An example is provided below:
 
-This will create an "analysis1" directory in your working directory. Inside the 
-"analysis1" directory you will see several empty directories.
+    java -jar ISGPipeline.jar -S ISGPipelineQScript.scala \
+    -I /path/to/input_dir \
+    -O /path/to/output_dir \
+    -R /path/to/reference.fasta \
+    -bwa /path/to/bwa \
+    -mummer /path/to/mummer_dir \
+    -gatk /path/to/gatk.jar \
+    -run
 
+Step 3:
 
-2. Copy (or symlink) input files to corresponding directory. Below is a diagram 
-of the directory structure corresponding to input file extensions:
-
-"analysis1" --> |---reads (.fastq, sequence.txt)
-                |
-                |---bams (.bam and .bai)
-                |
-                |---fastas (.fasta)
-                |
-                |---vcf (.vcf)
-                |
-                |---ref.fasta (required)
-
-PLEASE NOTE: 
-Copy the reference fasta file to the root of the "analysis1" directory. 
-This file must be named "ref.fasta". So, in this example, we would have the
-file "analysis1/ref.fasta".
-
-3. Run ISGPipeline again, this time with arguments to the necessary dependencies 
-(ie bwa, mummer, etc). 
-
-ex. java -jar ISGPipeline.jar -S ISGPipelineQScript.scala \
--isg analysis1 \
--bwa /path/to/bwa \
--mummer /path/to/mummer \
--gatk /path/to/gatkjar
--run
-
-The "-isg" argument must be the path to the directory created in step 1. 
-The "-mummer" argument must be the path to the root directory where Mummer is installed.
-
-When ISGPipeline is finished there will be a file called "isg_out.tab" in the 
-"analysis1/out" directory. This file is a matrix of ALL SNPs found by the pipeline. 
+    Be patient and wait for the analysis to finish. See "OUTPUT" section of the 
+    README for a discussion on the output files and directory structure.
 
 --------------------------------------------------------------------------------
---DIRECTORY STRUCTURE--
+--INPUT FILES--
 --------------------------------------------------------------------------------
 
-ISGPipeline creates the following directory structure for each analysis. Following
-each directory is an indication of how files within that directory are used by 
-ISG. An "O" means that ISGPipeline Outputs files into this directory while an "I" 
-means that ISGPipeline reads files from this directory Input by the user. Some 
-directories can function as both Input and Output. For example, you may have already 
-aligned the reads of some genomes in your analysis, but you have the raw reads 
-from other genomes that you would like ISGPipeline to align. In this case, you 
-would put the aligned reads (.bam and .bai) files in the bams/ directory and the 
-raw reads (.fastq) in the reads/ directory. ISGPipeline will use the bams/ directory 
-to write the results of aligning the raw reads and to store the .bam files that were 
-aligned prior to running ISGPipeline.
+To make life easier, ISG allows you to include as many files as you want 
+ISG uses file extensions to determine the type of file. Below is a list of file 
+types and supported extensions:
 
-ROOT --> |---mummer (O)
-         |
-         |---reads (I)
-         |
-         |---bams (I/O)
-         |
-         |---coverage (O)
-         |
-         |---fastas (I)
-         |
-         |---out (O)
-         |
-         |---vcf (I/O)
-         |
-         |---ref.fasta
+BAM     - .bam
+FASTQ   - .fastq, .fastq.gz, sequence.txt, sequence.txt.gz
+VCF     - .vcf
+GENBANK - .gbk, .gb
+FASTA   - .fasta, .fa
 
 
-ROOT
-the highest level directory ISGPipeline uses for an analysis. You should name 
-this file something meaningful describing your analysis. 
+--------------------------------------------------------------------------------
+--OUTPUT FILES--
+--------------------------------------------------------------------------------
 
-ROOT-->mummer
-directory where mummer output is stored. Namely, coords and snps. ISGPipeline will automatically run
-mummer on any fasta files found in the fastas directory and write the results to this directory.
+Depending on what input files are specified, ISG may generate a lot of files in 
+the output directory. Thus, it is important to understand its structure so that 
+you may quickly find the files of most interest to you.
 
-ROOT-->reads 
-directory containing reads files (.fastq, sequence.txt) to align with bwa.
+There are two subdirectories that ISG creates for every analysis: samples and ref. 
+The samples directory contains a subdirectory for each sample. Inside each individual
+sample directory exists all the intermediate files ISG generated for that particular
+sample. For example, if your analysis included a file named "ABC.fastq" then a 
+directory would exist with the path "out/samples/ABC/". Inside that directory would 
+be the following files (listed by extension): bam, bai, bed, summary, and vcf. 
 
-ROOT-->bams 
-directory containing aligned reads files (.bam) to call SNPs on.
+The "ref" directory is created to store duplicated regions found in the reference as 
+well as any duplicated regions found in completely sequenced genomes.
 
-ROOT-->coverage 
-directory containing coverage intervals for each bam and fasta used in the analysis. ISGPipeline will detect which
-regions are covered and write the results to this directory.
+The rest of the output files reside at the root of the output directory and are 
+described below:
 
-ROOT-->fastas 
-directory containing whole genome (.fasta) files to align using nucmer.
+all.variants.txt - variants detected by the pipeline where at least one sample 
+contains a "real" variant (i.e. not called the reference, missing, or ambiguous). 
 
-ROOT-->out
-directory containing ISGPipeline results. Two files will be written here: out.tab and merged.vcf
+ambiguous.variants.txt - variants detected by the pipeline, but were marked as 
+ambiguous. None of the samples contain a "real" variant in this file.
 
-ROOT-->vcf
-directory containing .vcf files of all variants detected by mummer and gatk. A .vcf file is created for each genome in the analysis.
+unique.variants.txt - variants from the all.variants.txt that do not overlap a 
+duplicated (repeated) region.
 
+dups.variants.txt - variants from the all.variants.txt that fall within a 
+duplicated region.
 
 --------------------------------------------------------------------------------
 --OPTIONS FILE--
