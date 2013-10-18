@@ -81,7 +81,7 @@ public class FormatForTree extends CommandLineProgram {
     }
 
     public static void assertSingleBaseAllele(Allele a) {
-        if (a.length() != 1) {
+        if (a.length() > 1) {
             throw new IllegalStateException("Only single base alleles are supported. found allele: " + a.toString());
         }
     }
