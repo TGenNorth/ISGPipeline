@@ -11,13 +11,20 @@ import java.io.File;
  * @author jbeckstrom
  */
 public enum InputResourceType {
-    BAM,
-    FASTQ,
-    VCF,
-    FASTA;
 
-    private InputResourceType() {
+    BAM(".bam"),
+    FASTQ(".fastq", ".fastq.gz", ".fq", ".fq.gz", "sequence.txt", "sequence.txt.gz"),
+    VCF(".vcf"),
+    FASTA(".fasta", ".fa");
+
+    private InputResourceType(String... extensions) {
+        this.extensions = extensions;
     }
+
+    public String[] getExtensions() {
+        return extensions;
+    }
+    private final String[] extensions;
 
     /**
      * Determine the type of file based on file extension.
@@ -26,22 +33,21 @@ public enum InputResourceType {
      * @return 
      */
     public static InputResourceType determineType(File f) {
-        final String filename = f.getName();
-        if (filename.endsWith(".bam")) {
-            return InputResourceType.BAM;
-        } else if (filename.endsWith(".fastq")
-                || filename.endsWith(".fastq.gz")
-                || filename.endsWith("sequence.txt")
-                || filename.endsWith("sequence.txt.gz")) {
-            return InputResourceType.FASTQ;
-        } else if (filename.endsWith(".vcf")) {
-            return InputResourceType.VCF;
-        } else if (filename.endsWith(".fasta")
-                || filename.endsWith(".fa")){
-            return InputResourceType.FASTA;
-        } else {
-            throw new IllegalStateException("Unsupported file type: "+filename);
+        String filename = f.getName();
+        for(InputResourceType type: InputResourceType.values()){
+            if(filenameEndsWith(filename, type.getExtensions())){
+                return type;
+            }
         }
+        throw new IllegalStateException("Cannot determine type of file: "+f);
     }
 
+    public static boolean filenameEndsWith(String filename, String[] extensions) {
+        for (String extension : extensions) {
+            if (filename.endsWith(extension)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

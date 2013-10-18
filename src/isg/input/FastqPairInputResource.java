@@ -21,4 +21,9 @@ public class FastqPairInputResource extends AbstractInputResource<Pair<File, Fil
     public void apply(InputResourceVisitor visitor) {
         visitor.visit(this);
     }
+    
+    @Override
+    public InputResourceType type() {
+        return InputResourceType.FASTQ;
+    }
 }

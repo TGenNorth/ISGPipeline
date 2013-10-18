@@ -16,4 +16,6 @@ public interface InputResource <T> {
     
     public void apply(InputResourceVisitor visitor);
     
+    public InputResourceType type();
+    
 }

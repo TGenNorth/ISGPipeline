@@ -20,21 +20,27 @@ import static org.junit.Assert.*;
  *
  * @author jbeckstrom
  */
-public class FastqInputResourceFactoryTest {
-    
+public class InputResourceFactoryTest {
+
+    private static File fq1 = new File("A_1.fastq");
+    private static File fq2 = new File("A_2.fastq");
     private final SequenceFilePairPatterns patterns = new SequenceFilePairPatterns();
-    
-    public FastqInputResourceFactoryTest() {
+
+    public InputResourceFactoryTest() {
         SequenceFilePairPattern pattern = new SequenceFilePairPattern("(.*)_([12])\\..*");
         patterns.addPattern(pattern);
     }
 
     @BeforeClass
     public static void setUpClass() throws Exception {
+        fq1.createNewFile();
+        fq2.createNewFile();
     }
 
     @AfterClass
     public static void tearDownClass() throws Exception {
+        fq1.delete();
+        fq2.delete();
     }
 
     /**
@@ -43,21 +49,20 @@ public class FastqInputResourceFactoryTest {
     @Test
     public void testCreatePair() throws Exception {
         System.out.println("createPair");
-        FastqInputResourceFactory instance = new FastqInputResourceFactory(patterns);
-        InputResource<?> result = instance.create(new File("A_1.fastq"));
-        assertNull(result);
-        InputResource<?> result2 = instance.create(new File("A_2.fastq"));
+        InputResourceFactoryImpl instance = new InputResourceFactoryImpl(patterns);
+        InputResource<?> result = instance.create(fq1);
         InputResource<Pair<File, File>> expected = new FastqPairInputResource("A", new Pair<File, File>(new File("A_1.fastq"), new File("A_2.fastq")));
-        assertEquals(expected, result2);
+        assertEquals(expected, result);
+        result = instance.create(fq2);
+        assertNull(result);
     }
-    
+
     @Test
     public void testCreateSingle() throws Exception {
         System.out.println("createSingle");
-        FastqInputResourceFactory instance = new FastqInputResourceFactory(patterns);
+        InputResourceFactoryImpl instance = new InputResourceFactoryImpl(patterns);
         InputResource<?> result = instance.create(new File("ABC.fastq"));
         InputResource<File> expected = new FastqInputResource("ABC", new File("ABC.fastq"));
         assertEquals(expected, result);
     }
-
 }

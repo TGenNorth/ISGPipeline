@@ -20,4 +20,9 @@ public class FastqInputResource extends AbstractInputResource<File>  {
     public void apply(InputResourceVisitor visitor) {
         visitor.visit(this);
     }
+
+    @Override
+    public InputResourceType type() {
+        return InputResourceType.FASTQ;
+    }
 }

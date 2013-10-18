@@ -53,6 +53,11 @@ public abstract class AbstractInputResource <T> implements InputResource <T> {
         hash = 97 * hash + (this.resource != null ? this.resource.hashCode() : 0);
         return hash;
     }
+
+    @Override
+    public String toString() {
+        return "InputResource{" + "sampleName=" + sampleName + ", resource=" + resource + '}';
+    }
     
     
 }

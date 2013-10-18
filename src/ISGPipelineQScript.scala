@@ -29,6 +29,8 @@ import org.apache.commons.io.FileUtils
 import util.TypedProperties
 import util.GenomicFileUtils
 import org.broadinstitute.sting.commandline.Hidden
+import org.broadinstitute.sting.utils.exceptions.UserException
+import org.broadinstitute.sting.commandline.CommandLineProgram
 
 class ISGPipelineQScript extends QScript {
 
@@ -168,7 +170,17 @@ class ISGPipelineQScript extends QScript {
    * In script, you create and then add() functions to the pipeline.
    */
   def script() {
-
+    try{
+      executeScript
+    }catch{
+      case ex: UserException =>{
+          CommandLineProgram.exitSystemWithUserError(ex)
+      }
+    }
+    
+  }
+  
+  def executeScript() {
     //initialize
     init
     initRef
@@ -182,11 +194,8 @@ class ISGPipelineQScript extends QScript {
     sequencePatterns.addPattern(new SequenceFilePairPattern("(.*)_([12])\\..*"))
     
     //create factories for detecting/creating input resources
-    val inputResourceManagerBuilder = new InputResourceManagerBuilder()
-    inputResourceManagerBuilder.addFactory(new VcfInputResourceFactory())
-    inputResourceManagerBuilder.addFactory(new FastaInputResourceFactory())
-    inputResourceManagerBuilder.addFactory(new BamInputResourceFactory())
-    inputResourceManagerBuilder.addFactory(new FastqInputResourceFactory(sequencePatterns))
+    val inputResourceFactory = new InputResourceFactoryImpl(sequencePatterns)
+    val inputResourceManagerBuilder = new InputResourceManagerBuilder(inputResourceFactory)
     
     //add input files
     if(inputDir != null){
@@ -234,7 +243,6 @@ class ISGPipelineQScript extends QScript {
         add(new FormatForTree(dups, dupsFasta))
       }
     }
-    
   }
   
   def initRef() {
@@ -245,13 +253,16 @@ class ISGPipelineQScript extends QScript {
     val prefix = refoutputDir.getPath + "/" + filename + "_" + filename
     val coords = new File(refoutputDir, filename + "_" + filename + ".coords")
     val refDups = new File(refoutputDir, filename + ".interval_list")
-
-    add(new Nucmer(referenceSequence, referenceSequence, prefix, true, true))
-    add(new CoordsDup(coords, referenceSequence, refDups))
+    
     add(new CreateDict(referenceSequence))
     add(new CreateFAI(referenceSequence))
     if(pathToBWA!=null) add(new BWAIndex(referenceSequence))
-    addDups(refDups)
+    if(pathToMummer!=null) {
+      add(new Nucmer(referenceSequence, referenceSequence, prefix, true, true))
+      add(new CoordsDup(coords, referenceSequence, refDups))
+      addDups(refDups)
+    }
+    
   }
   
   class InputResourceVisitorImpl() extends InputResourceVisitor{
