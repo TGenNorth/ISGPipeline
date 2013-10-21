@@ -86,7 +86,7 @@ public class ISGToolsBatchRunner extends CommandLineProgram {
     @Option(doc = "Directory of genbank files.", optional=true)
     public File GBK_DIR;
     @Option
-    public List<Program> PROGRAM = CollectionUtil.makeList(Program.values());
+    public List<Program> PROGRAM;// = CollectionUtil.makeList(Program.values());
 
     private static FilenameFilter GBK_FILENAME_FILTER = new FilenameFilter(){
 
