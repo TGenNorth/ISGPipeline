@@ -10,7 +10,7 @@ of the variants called are false positives in order to prevent incorrectly assum
 the reference state. Therefore, two important steps must be added to the merging 
 process. First, variants from each sample must be analyzed for ambiguity and marked 
 as such before further processing. Second, samples without genotype information 
-for a locus must be genotyped in a intelligent way.
+for a locus must be genotyped in an intelligent way.
 
  
 
@@ -101,7 +101,7 @@ Determining the sample name of a paired-end fastq separated into two distinct fi
 is more challenging because the sample name as well as the pairing information is 
 contained within the filename. For example, if two input files named "XYZ_1.fastq" 
 and "XYZ_2.fastq" were included in the input directory, ISG would recognize the 
-two files as a pair and use "XYZ" as the sample name. ISG makes this determination 
+two files as a pair and use "XYZ" as the sample name to identify it. ISG makes this determination 
 by using the following regular expressions:
 
 (.*)_[0-9]+_([12])_sequence\\..
@@ -111,7 +111,7 @@ by using the following regular expressions:
 (.*)_([12])\\..*
 
 If a BAM or VCF is included in the input directory, ISG will read the file's header 
-to determine what sample name to give it. For BAMs, ISG will look at 
+to determine what sample name to identify it with. For BAMs, ISG will look at 
 the ReadGroup's SN field while for VCFs, ISG will look at the 
 listed genotypes. In both cases, if more than one sample 
 name is found, ISG will exit immediately and display an error.
@@ -130,7 +130,7 @@ sample. Inside each individual sample directory exists all the intermediate file
 ISG generated for that particular
 sample. For example, let's say that your analysis included a raw reads file named "ABC.fastq". 
 ISG will create a directory named after the sample "ABC" (for a discussion on how ISG determines
-sample names see "section"). Inside that directory would 
+sample names see "SAMPLE NAMES"). Inside that directory would 
 be the following files (listed by extension): bam, bai, bed, summary, and vcf. 
 
 The "ref" directory is created to store duplicated regions found in the reference as 
