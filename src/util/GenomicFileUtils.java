@@ -4,6 +4,7 @@
  */
 package util;
 
+import isg.input.InputResourceValidationExceptions.MissingReadGroupException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMReadGroupRecord;
 import org.broad.tribble.FeatureReader;
 import org.broad.tribble.TribbleIndexedFeatureReader;
+import org.broadinstitute.sting.utils.exceptions.UserException;
 import org.broadinstitute.variant.variantcontext.VariantContext;
 import org.broadinstitute.variant.vcf.VCFCodec;
 import org.broadinstitute.variant.vcf.VCFHeader;
@@ -26,7 +28,7 @@ public class GenomicFileUtils {
     public static String extractFirstSampleName(File f) throws IOException{
         List<String> ret = extractSampleNames(f);
         if(ret.isEmpty()){
-            throw new IllegalArgumentException("no sample names defined in file: "+f);
+            throw new UserException("no sample names defined in file: "+f);
         }
         return ret.get(0);
     }
@@ -48,12 +50,12 @@ public class GenomicFileUtils {
         return header.getGenotypeSamples();
     }
     
-    public static List<String> extractSampleNamesFromBAM(File f) throws IOException{
+    public static List<String> extractSampleNamesFromBAM(File f){
         final List<String> ret = new ArrayList<String>();
         final SAMFileReader in = new SAMFileReader(f);
         final List<SAMReadGroupRecord> rgs = in.getFileHeader().getReadGroups();
         if(rgs==null){
-            throw new IllegalArgumentException("sam/bam file does not have a read group defined: "+f.getPath());
+            throw new MissingReadGroupException(f);
         }
         for(SAMReadGroupRecord rg: rgs){
             ret.add(rg.getSample());

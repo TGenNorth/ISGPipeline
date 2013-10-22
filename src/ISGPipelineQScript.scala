@@ -38,13 +38,13 @@ class ISGPipelineQScript extends QScript {
   @Input(doc="The analysis directory.", shortName="isg", exclusiveOf="I,O,R", required=false)
   var isgRoot: File = null
   
-  @Input(doc="Directory containing input files (fastqs, fastas, bams, etc)", shortName="I", fullName="input_dir", exclusiveOf="isg")
+  @Input(doc="Directory containing input files (fastqs, fastas, bams, etc)", shortName="I", fullName="input_dir", exclusiveOf="isg", required=false)
   var inputDir: File = null
   
-  @Input(doc="Directory where output files will be written", shortName="O", fullName="output_dir", exclusiveOf="isg")
+  @Input(doc="Directory where output files will be written", shortName="O", fullName="output_dir", exclusiveOf="isg", required=false)
   var outputDir: File = null
   
-  @Input(doc="Reference sequence file.", shortName="R", fullName="reference_sequence", exclusiveOf="isg")
+  @Input(doc="Reference sequence file.", shortName="R", fullName="reference_sequence", exclusiveOf="isg", required=false)
   var referenceSequence: File = null
   
   @Argument(doc="Path to GATK jar file", shortName="gatk", required=false)
@@ -115,7 +115,13 @@ class ISGPipelineQScript extends QScript {
   var refoutputDir: File = _
   var typedProperties: TypedProperties = new TypedProperties()
   
+  def validateArguments() {
+    
+  }
+  
   def init() {
+    
+    validateArguments
     
     if(isgRoot!=null){
       mkdir(isgRoot)
@@ -130,9 +136,22 @@ class ISGPipelineQScript extends QScript {
       dupsDir = mkdir(new File(isgRoot, "dups"))
       referenceSequence = new File(isgRoot, "ref.fasta")
       outputDir = mkdir(new File(isgRoot, "out"))
-    }else{
+    }else if(outputDir!=null && inputDir!=null && referenceSequence!=null){
       mkdir(outputDir)
       gbkDir = inputDir
+    }else{
+      val sb = new StringBuilder();
+      val format = "%nArgument with name '--%s' (-%s) is missing."
+      if(outputDir==null){
+        sb.append( String.format(format, "output_dir", "O") );
+      }
+      if(inputDir==null){
+        sb.append( String.format(format, "input_dir", "I") );
+      }
+      if(referenceSequence==null){
+        sb.append( String.format(format, "reference_sequence", "R") );
+      }
+      throw new UserException(sb.toString)
     }
     
     samplesoutputDir = mkdir(new File(outputDir, "samples"))

@@ -45,6 +45,12 @@ public class InputResourceValidationExceptions extends UserException{
         }
     }
     
+    public static final class MissingReadGroupException extends MalformedBAM{
+        public MissingReadGroupException(File f){
+            super(f, "Missing read group in file header");
+        }
+    }
+    
     public static final class NoSampleDetectedException extends UserException{
         public NoSampleDetectedException(File f){
             super(String.format("No sample detected in file header: %s", f.getAbsoluteFile()));
