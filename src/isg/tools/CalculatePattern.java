@@ -25,7 +25,23 @@ import org.broadinstitute.variant.variantcontext.VariantContext;
 import org.broadinstitute.variant.variantcontext.VariantContextBuilder;
 
 /**
- *
+ * Calculate the pattern and pattern number for each sample of a SNP matrix. The 
+ * pattern is a numeric representation of the allele called at each sample in 
+ * terms of the reference. The reference allele is assigned a '1' and each sample's 
+ * allele that is the same as the reference is also assigned a '1'. All non reference 
+ * allele calls are given a '2' or greater unless the allele is a '.' or 'N'. Take 
+ * for example the following variant record:
+ * 
+ * ref: A=1
+ * sm1: T=2
+ * sm2: A=1
+ * sm3: N=N
+ * 
+ * In this case, "ref" and "sm2" will be assinged a '1' and "sm1" will be assinged 
+ * a '2'. The resulting pattern would look like this 121N. The benefit to using 
+ * numeric aliases is that one can easily identify a SNP by looking for numbers 
+ * greater than 1 instead of comparing the allele to the reference. 
+ * 
  * @author jbeckstrom
  */
 public class CalculatePattern extends CommandLineProgram {

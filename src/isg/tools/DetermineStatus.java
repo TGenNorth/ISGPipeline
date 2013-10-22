@@ -23,7 +23,9 @@ import org.broadinstitute.variant.variantcontext.VariantContext;
 import org.broadinstitute.variant.variantcontext.VariantContextBuilder;
 
 /**
- *
+ * Determines the status of a record in a SNP matrix and appends the status info 
+ * in another column. 
+ * 
  * @author jbeckstrom
  */
 public class DetermineStatus extends CommandLineProgram {

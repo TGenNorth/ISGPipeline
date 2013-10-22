@@ -26,7 +26,16 @@ import org.broadinstitute.variant.variantcontext.VariantContext;
 import org.broadinstitute.variant.variantcontext.VariantContextBuilder;
 
 /**
- *
+ * Filters a SNP matrix by removing all records that include an ambiguous or 
+ * missing allele. Cleaning a matrix prior to using a phylogenetic tree program 
+ * may be required if the program doesn't support alleles with a '.' or 'N'. 
+ * Furthermore, a clean matrix may produce a better phylogenetic tree because 
+ * any ambiguity has been filtered out. However, before running clean matrix it 
+ * is advised that you investigate the statistics of an ISG run to determine if 
+ * certain genomes should be removed. If a genome has a high percentage of ambiguous 
+ * or missing calls and is included in the matrix you may find that very few 
+ * records are remaining after running CleanMatrix.
+ * 
  * @author jbeckstrom
  */
 public class CleanMatrix extends CommandLineProgram {

@@ -14,7 +14,17 @@ import net.sf.picard.cmdline.Usage;
 import org.broadinstitute.variant.variantcontext.VariantContext;
 
 /**
- *
+ * A tool to calculates statistics on a SNP matrix file. These statistics are 
+ * calculated per sample and include counts and percentages of four possible 
+ * calls found in a matrix. Namely, SNP, no coverage, ambiguous, or reference. 
+ * The percentage is calculated by taking the count divided by the total number 
+ * of records in the matrix. The statistics can be useful in assessing overall 
+ * quality of an ISG run and pinpointing which genomes should be removed from the 
+ * analysis. For instance, a high percentage of ambiguous calls can indicate a 
+ * bad genome that should be removed. Similarly, a high 
+ * percentage of no coverage calls can indicate a genome that should be removed 
+ * due to inadequate coverage.
+ * 
  * @author jbeckstrom
  */
 public class CalculateStatistics extends CommandLineProgram {
