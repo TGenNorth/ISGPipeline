@@ -31,6 +31,8 @@ import util.GenomicFileUtils
 import org.broadinstitute.sting.commandline.Hidden
 import org.broadinstitute.sting.utils.exceptions.UserException
 import org.broadinstitute.sting.commandline.CommandLineProgram
+import net.sf.picard.io.IoUtil
+import net.sf.picard.PicardException
 
 class ISGPipelineQScript extends QScript {
 
@@ -116,14 +118,42 @@ class ISGPipelineQScript extends QScript {
   var typedProperties: TypedProperties = new TypedProperties()
   
   def validateArguments() {
+    val sb = new StringBuilder();
+    val format = "%nArgument with name '--%s' (-%s) is missing."
+      
+    if(isgRoot==null && (outputDir==null || inputDir==null || referenceSequence!=null)){
+      
+      if(outputDir==null){
+        sb.append( String.format(format, "output_dir", "O") );
+      }
+      if(inputDir==null){
+        sb.append( String.format(format, "input_dir", "I") );
+      }
+      if(referenceSequence==null){
+        sb.append( String.format(format, "reference_sequence", "R") );
+      }
+    }
     
-  }
+    if(sb.length>0) throw new UserException(sb.toString)
+
+    if(pathToMummer!=null){
+      IoUtil.assertDirectoryIsReadable(new File(pathToMummer))
+    }
+    
+    if(gatkJarFile!=null){
+      util.IoUtil.assertFileIsExecutable(gatkJarFile)
+    }
+    
+    if(pathToBWA!=null){
+      util.IoUtil.assertFileIsExecutable(new File(pathToBWA))
+    }
+
+  } 
   
   def init() {
-    
-    validateArguments
-    
+  
     if(isgRoot!=null){
+      IoUtil.assertDirectoryIsWritable(isgRoot.getParentFile)
       mkdir(isgRoot)
       
       fastaDir = mkdir(new File(isgRoot, "fastas"))
@@ -137,21 +167,14 @@ class ISGPipelineQScript extends QScript {
       referenceSequence = new File(isgRoot, "ref.fasta")
       outputDir = mkdir(new File(isgRoot, "out"))
     }else if(outputDir!=null && inputDir!=null && referenceSequence!=null){
+      //validate inputs
+      IoUtil.assertDirectoryIsWritable(outputDir)
+      IoUtil.assertDirectoryIsReadable(inputDir)
+      IoUtil.assertFileIsReadable(referenceSequence)
+      IoUtil.assertFileSizeNonZero(referenceSequence)
+      
       mkdir(outputDir)
       gbkDir = inputDir
-    }else{
-      val sb = new StringBuilder();
-      val format = "%nArgument with name '--%s' (-%s) is missing."
-      if(outputDir==null){
-        sb.append( String.format(format, "output_dir", "O") );
-      }
-      if(inputDir==null){
-        sb.append( String.format(format, "input_dir", "I") );
-      }
-      if(referenceSequence==null){
-        sb.append( String.format(format, "reference_sequence", "R") );
-      }
-      throw new UserException(sb.toString)
     }
     
     samplesoutputDir = mkdir(new File(outputDir, "samples"))
@@ -190,9 +213,13 @@ class ISGPipelineQScript extends QScript {
    */
   def script() {
     try{
+      validateArguments
       executeScript
     }catch{
       case ex: UserException =>{
+          CommandLineProgram.exitSystemWithUserError(ex)
+      }
+      case ex: PicardException =>{
           CommandLineProgram.exitSystemWithUserError(ex)
       }
     }

@@ -43,7 +43,7 @@ are required and where to get them.
 
 To get a listing of optional/required arguments type the following:
 
-java -jar ISGPipeline.jar -S ISGPipelineQScript.scala
+java -jar ISGPipeline.jar -S ISGPipelineQScript.scala -h
 
 
 Steps to run an analysis:
@@ -203,4 +203,4 @@ to each dependency using the options from the command line.
 
 -MUMmer 3+ (http://sourceforge.net/projects/mummer/)
 -GATK
--BWA (optional)
+-BWA
