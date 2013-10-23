@@ -28,7 +28,8 @@ v0.16.9
 
     -New, easier way of running ISG. Refer to "RUNNING ISGPipeline" section for details.
     -Include fasta representation for each output matrix.
-    -Improved error handling for validating input files.
+    -Improved error message descriptions.
+    -Added early validation of input files and arguments.
     -Optionally include calculation of pattern number fields.
     -Display argument defaults on splash screen.
     -Calculate allele frequency from AD field instead of pre-calculated AF field.
