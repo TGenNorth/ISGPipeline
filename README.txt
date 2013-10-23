@@ -2,6 +2,8 @@
 --DESCRIPTION--
 --------------------------------------------------------------------------------
 
+[TODO add description of pre-processing]
+
 ISG (In-Silico Genotyper) creates a matrix of SNPs across multiple taxa. At its core, ISG 
 merges single sample VCF files into a matrix. However, it is more complicated than 
 that because not every sample has genotype information for a particular locus and 
@@ -91,18 +93,26 @@ FASTA   - .fasta, .fa
 --SAMPLE NAMES--
 --------------------------------------------------------------------------------
 
-ISG uses filenames and, in some cases, file headers to determine the sample name 
-used in the output directory and matrix files. In the simplest case, the sample 
-name is the filename less the extension. This is true for any FASTA input files 
-as well as single-end fastqs. For example, if an input file had the name "ABC.fasta" 
-ISG would use "ABC" as the sample name in output matrix. 
+ISG uses sample names to identify a particular input genome. As such, the 
+sample name must be unique across all input genomes. Any duplicated sample name 
+will cause ISG to terminate with an error. Sample names are used throughout the 
+pipeline as well as in the output matrix files, thus it is imperative that you 
+designate meaningful sample names to each input genome when possible. 
+
+ISG uses filenames and, in some cases, file headers to determine the sample name. 
+In the simplest case, the sample name is the filename less the extension. This is 
+true for any FASTA input files and single-end FASTQs. For example, if an input 
+file had the name "ABC.fasta" ISG would use "ABC" as the sample name to identify 
+the genome.
 
 Determining the sample name of a paired-end fastq separated into two distinct files 
 is more challenging because the sample name as well as the pairing information is 
 contained within the filename. For example, if two input files named "XYZ_1.fastq" 
 and "XYZ_2.fastq" were included in the input directory, ISG would recognize the 
-two files as a pair and use "XYZ" as the sample name to identify it. ISG makes this determination 
-by using the following regular expressions:
+two files as a pair and use "XYZ" as the sample name to identify it. If ISG recognizes 
+an input file as paired and cannot locate the mate file, it will terminate with 
+an error. ISG determines if an input FASTQ is paired by using the following 
+regular expression:
 
 (.*)_[0-9]+_([12])_sequence\\..
 (.*)_[ATCG]+_L[0-9]+_R([12])_[0-9]+\\..*
@@ -111,10 +121,10 @@ by using the following regular expressions:
 (.*)_([12])\\..*
 
 If a BAM or VCF is included in the input directory, ISG will read the file's header 
-to determine what sample name to identify it with. For BAMs, ISG will look at 
-the ReadGroup's SN field while for VCFs, ISG will look at the 
-listed genotypes. In both cases, if more than one sample 
-name is found, ISG will exit immediately and display an error.
+to determine what sample name to identify the genome by. For BAMs, ISG will look at 
+the ReadGroup's SM field while for VCFs, ISG will look at the listed genotypes. 
+In both cases, if more than one sample name is found, ISG will exit immediately 
+and display an error.
 
 --------------------------------------------------------------------------------
 --OUTPUT FILES--
@@ -122,16 +132,16 @@ name is found, ISG will exit immediately and display an error.
 
 Depending on what input files are specified, ISG may generate a lot of files in 
 the output directory. These files are organized in a directory structure that 
-facilitates finding the files of most interest to you.
+facilitates finding the files by sample name.
 
 There are two subdirectories of the output directory that ISG creates for every 
-analysis: samples and ref. The samples directory contains a subdirectory for each 
+analysis: "samples" and "ref". The "samples" directory contains a subdirectory for each 
 sample. Inside each individual sample directory exists all the intermediate files 
-ISG generated for that particular
-sample. For example, let's say that your analysis included a raw reads file named "ABC.fastq". 
-ISG will create a directory named after the sample "ABC" (for a discussion on how ISG determines
-sample names see "SAMPLE NAMES"). Inside that directory would 
-be the following files (listed by extension): bam, bai, bed, summary, and vcf. 
+ISG generated for that particular sample. For example, let's say that your analysis 
+includes a raw reads file named "ABC.fastq". ISG will create a directory named 
+"ABC" (for a discussion on how ISG determines sample names see "SAMPLE NAMES"). 
+Inside that directory would be the following files (listed by extension): bam, 
+bai, bed, summary, and vcf. 
 
 The "ref" directory is created to store duplicated regions found in the reference as 
 well as any duplicated regions found in completely sequenced genomes. As such,
@@ -141,8 +151,9 @@ exists there will be files corresponding to the repeats found in those genomes.
 
 The rest of the output files reside at the root of the output directory and fall 
 into one of three categories: "all", "dups", and "unique". Each category contains 
-a SNP matrix file and a file representing the SNP matrix in a fasta format. The 
-"all" category contains variants detected by the pipeline where at least one sample 
+a SNP matrix file and a file representing the SNP matrix in a fasta format. 
+
+The "all" category contains variants detected by the pipeline where at least one sample 
 contains a "real" variant (i.e. not called the reference, missing, or ambiguous). 
 In addition to the SNP matrix and fasta file, the "all" category has a annotated 
 SNP matrix (all.variants.final.txt) and a statistics file (all.variants.final.txt.stats).
