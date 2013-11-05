@@ -2,9 +2,16 @@
 --DESCRIPTION--
 --------------------------------------------------------------------------------
 
-[TODO add description of pre-processing]
+ISG (In-Silico Genotyper) uses BWA to align NGS reads against the reference 
+(creating bam files), and it uses MUMmer to align fasta-formatted, sequenced genomes to call SNPs. It then 
+uses the GATK Unified Genotyper to call and determine ambiguity of SNPs from the 
+bam files, and puts them into vcf format.  ISG performs "intelligent" alignment, 
+using data at whatever stage they are provided (e.g., reads, bams, vcfs, fastas). 
+Adding further sample files and rerunning will process the new additions and create 
+a new variant matrix. All previously called variant loci are checked in the new samples, 
+and any newly found variant positions are checked/verified in the earlier samples.
 
-ISG (In-Silico Genotyper) creates a matrix of SNPs across multiple taxa. At its core, ISG 
+ISG creates a matrix of SNPs across multiple taxa. At its core, ISG 
 merges single sample VCF files into a matrix. However, it is more complicated than 
 that because not every sample has genotype information for a particular locus and 
 not every genotyped locus is necessarily correct. In fact, ISG expects that many 
@@ -12,12 +19,8 @@ of the variants called are false positives in order to prevent incorrectly assum
 the reference state. Therefore, two important steps must be added to the merging 
 process. First, variants from each sample must be analyzed for ambiguity and marked 
 as such before further processing. Second, samples without genotype information 
-for a locus must be genotyped in an intelligent way.
+for a locus must be genotyped by inspecting the reads covering the locus.
 
- 
-
-ISGTools is a collection of java command line utilities that manipulate/annotate the 
-results of ISGPipeline. To find out more read the README in the isgtools directory.
 
 
 --------------------------------------------------------------------------------
@@ -44,10 +47,6 @@ First, make sure that you have all the dependencies installed on your machine.
 Please review the "DEPENDENCIES" section of the README to find out what programs 
 are required and where to get them.
 
-To get a listing of optional/required arguments type the following:
-
-java -jar ISGPipeline.jar -S ISGPipelineQScript.scala -h
-
 
 Steps to run an analysis:
 
@@ -68,12 +67,93 @@ Step 2:
     -bwa /path/to/bwa \
     -mummer /path/to/mummer_dir \
     -gatk /path/to/gatk.jar \
+    -nt 1 \
+    --allow_potentially_misencoded_quality_scores
     -run
 
 Step 3:
 
-    Be patient and wait for the analysis to finish. See "OUTPUT" section of the 
-    README for a discussion on the output files and directory structure.
+    Wait for the analysis to finish. See "OUTPUT" section of the README for a 
+    discussion on the output files and directory structure.
+
+--------------------------------------------------------------------------------
+--Running Options--
+--------------------------------------------------------------------------------
+
+To get a listing of optional/required arguments type the following:
+
+java -jar ISGPipeline.jar -S ISGPipelineQScript.scala -h
+
+Options:
+
+ -I,--input_dir <input_dir>                       
+
+    Directory containing input files (fastqs, fastas, bams, etc). Refer to "INPUT FILES"
+    section for details.
+
+ -O,--output_dir <output_dir>                    
+
+    Directory where output files will be written. Refer to "OUTPUT FILES" section for 
+    details.
+
+ -R,--reference_sequence <reference_sequence>    
+
+    Reference sequence fasta file. If you have genbank annotations for this reference 
+    refer to "ANNOTATIONS" section for details.
+
+ -gatk,--gatkjarfile <gatkjarfile>               
+
+    Path to GATK jar file. Requires version 2.5+
+
+ -bwa,--pathtobwa <pathtobwa>                    
+
+    Path to bwa executable.
+
+ -mummer,--pathtomummer <pathtomummer>           
+
+    Path to directory containing mummer executables.
+
+ --optionsfile <optionsfile>                     
+
+    Path to options file. Refere to "OPTIONS FILE" section for details.
+
+ --minaf <minaf>                                 
+
+    The minimum allele frequency of an alternative base needed to call a SNP. 
+    Default value: 0.75
+
+ --minqual <minqual>                             
+
+    The minimum Phred scaled probability needed to call a SNP. 
+    Default value: 30
+
+ --mingq <mingq>                                 
+
+    The minimum genotype quality needed to call a variant. 
+    Default value: 4
+
+ --mindp <mindp>                                 
+
+    The minimum depth of reads needed to call a variant. 
+    Default value: 3
+
+ --allow_potentially_misencoded_quality_scores   
+
+    Do not fail when encountering base qualities that are too high and that seemingly 
+    indicate a problem with the base quality encoding of the BAM file.
+
+ --usebwamem                                     
+
+    Run bwa mem algorithm. Setting this flag requires bwa version 0.7+
+
+ --includepattern                                
+
+    Include pattern fields in output matrix.
+
+ -nt,--num_threads <num_threads>
+
+    How many CPU threads should be allocated?
+
 
 --------------------------------------------------------------------------------
 --INPUT FILES--
@@ -128,6 +208,26 @@ In both cases, if more than one sample name is found, ISG will exit immediately
 and display an error.
 
 --------------------------------------------------------------------------------
+--ANNOTATIONS--
+--------------------------------------------------------------------------------
+
+ISG will annotate SNPs in the output matrix files if genbank file(s) are provided 
+in the input directory. ISG matches a sequence in the reference fasta file with 
+a genbank file by using the genbank's filename. For example, consider the following 
+reference fasta file:
+
+>ABC
+ATCGA....ATGC
+>XYZ
+ATTC....AATTC
+
+ISG will use the sequence headers (ABC and XYZ) to find the corresponding genbank
+files (ABC.gbk and XYZ.gbk) in the input directory. Thus, it is important that 
+there is a genbank file for each sequence in the reference fasta and that each 
+genbank file is named identically to the header of the corresponding sequence in 
+the reference fasta file.  
+
+--------------------------------------------------------------------------------
 --OUTPUT FILES--
 --------------------------------------------------------------------------------
 
@@ -156,7 +256,7 @@ a SNP matrix file and a file representing the SNP matrix in a fasta format.
 
 The "all" category contains variants detected by the pipeline where at least one sample 
 contains a "real" variant (i.e. not called the reference, missing, or ambiguous). 
-In addition to the SNP matrix and fasta file, the "all" category has a annotated 
+In addition to the SNP matrix and fasta file, the "all" category has an annotated 
 SNP matrix (all.variants.final.txt) and a statistics file (all.variants.final.txt.stats).
 
 The "unique" category contains a subset of variants from the "all" category that 
@@ -214,5 +314,5 @@ be installed on the machine where ISGPipeline is run. You can specify the path
 to each dependency using the options from the command line.
 
 -MUMmer 3+ (http://sourceforge.net/projects/mummer/)
--GATK
+-GATK (2.5+)
 -BWA
