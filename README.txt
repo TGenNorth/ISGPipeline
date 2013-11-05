@@ -2,168 +2,208 @@
 --DESCRIPTION--
 --------------------------------------------------------------------------------
 
-ISGPipeline is a java program that combines SNPs into a matrix for genotyping. 
-Functionality includes snp calling using solsnp and/or mummer, identification of 
-ambiguous SNPs, identification of regions of no coverage using samtools and 
-mummer, and annotation of SNPs using genbank.
+[TODO add description of pre-processing]
 
-ISGTools is a collection of java command line utilities that manipulate the 
+ISG (In-Silico Genotyper) creates a matrix of SNPs across multiple taxa. At its core, ISG 
+merges single sample VCF files into a matrix. However, it is more complicated than 
+that because not every sample has genotype information for a particular locus and 
+not every genotyped locus is necessarily correct. In fact, ISG expects that many 
+of the variants called are false positives in order to prevent incorrectly assuming 
+the reference state. Therefore, two important steps must be added to the merging 
+process. First, variants from each sample must be analyzed for ambiguity and marked 
+as such before further processing. Second, samples without genotype information 
+for a locus must be genotyped in an intelligent way.
+
+ 
+
+ISGTools is a collection of java command line utilities that manipulate/annotate the 
 results of ISGPipeline. To find out more read the README in the isgtools directory.
 
+
 --------------------------------------------------------------------------------
---PROCESSES--
+--RELEASE NOTES--
 --------------------------------------------------------------------------------
 
-SNP calling -
-ISGPipeline uses several different methods for calling SNPs. SNP calling on input
-bam files will be done using GATK or SolSNP. If GATK is specified, then ISGPipeline 
-will run the UnifiedGenotyper on each bam file. 
-//TODO Explain how UnifiedGenotyper is run
-If GATK is not specified, then SolSNP will be run.
-//TODO explain SolSNP 
-SNP calling on input sequence files will be done using MUMmer.
+v0.16.9
 
-coverage
-ISGPipeline will calculate coverage for each genome. For bams, an area will be 
-considered covered if it has at least MIN_COVERAGE (default value is 3) reads. For 
-fastas, an locus will be considered covered if it aligns to the reference using MUMmer.
-
+    -New, easier way of running ISG. Refer to "RUNNING ISGPipeline" section for details.
+    -Include fasta representation for each output matrix.
+    -Improved error message descriptions.
+    -Added early validation of input files and arguments.
+    -Optionally include calculation of pattern number fields.
+    -Display argument defaults on splash screen.
+    -Calculate allele frequency from AD field instead of pre-calculated AF field.
+    -Modified output directory structure. Refer to "OUTPUT FILES" section for details.
 
 
 --------------------------------------------------------------------------------
 --RUNNING ISGPipeline--
 --------------------------------------------------------------------------------
 
-To run the project from the command line, go to the dist folder and
-type the following:
+First, make sure that you have all the dependencies installed on your machine. 
+Please review the "DEPENDENCIES" section of the README to find out what programs 
+are required and where to get them.
 
-java -jar "ISGPipeline.jar" 
+To get a listing of optional/required arguments type the following:
+
+java -jar ISGPipeline.jar -S ISGPipelineQScript.scala -h
+
 
 Steps to run an analysis:
 
-1. To initialize a project run ISGPipeline using only the ISG argument. Use a meaningful name that describes your analysis.
+Step 1:  
+    
+    Organize all of your input files (i.e. fastas, fastqs, etc) into a single 
+    directory. If you're not sure what file types are acceptable please refer to 
+    the "INPUT FILES" section of this README. 
 
-ex. java -jar ISGPipeline.jar ISG=analysis1. 
+Step 2:
+  
+    Run ISGPipeline. An example is provided below:
 
-This will create an "analysis1" directory in your working directory. Inside the "analysis1" directory you will see several empty directories.
+    java -jar ISGPipeline.jar -S ISGPipelineQScript.scala \
+    -I /path/to/input_dir \
+    -O /path/to/output_dir \
+    -R /path/to/reference.fasta \
+    -bwa /path/to/bwa \
+    -mummer /path/to/mummer_dir \
+    -gatk /path/to/gatk.jar \
+    -run
+
+Step 3:
+
+    Be patient and wait for the analysis to finish. See "OUTPUT" section of the 
+    README for a discussion on the output files and directory structure.
+
+--------------------------------------------------------------------------------
+--INPUT FILES--
+--------------------------------------------------------------------------------
+
+All input files must reside at the root of a single directory to be included in an ISG analysis. 
+Within the input directory, ISG uses file extensions to determine the type of file. Below is a list of file 
+types and supported extensions. Any file with an extension not listed below will be
+ignored by ISG.
+
+BAM     - .bam
+FASTQ   - .fastq, .fastq.gz, sequence.txt, sequence.txt.gz
+VCF     - .vcf
+GENBANK - .gbk, .gb
+FASTA   - .fasta, .fa
+
+--------------------------------------------------------------------------------
+--SAMPLE NAMES--
+--------------------------------------------------------------------------------
+
+ISG uses sample names to identify a particular input genome. As such, the 
+sample name must be unique across all input genomes. Any duplicated sample name 
+will cause ISG to terminate with an error. Sample names are used throughout the 
+pipeline as well as in the output matrix files, thus it is imperative that you 
+designate meaningful sample names to each input genome when possible. 
+
+ISG uses filenames and, in some cases, file headers to determine the sample name. 
+In the simplest case, the sample name is the filename less the extension. This is 
+true for any FASTA input files and single-end FASTQs. For example, if an input 
+file had the name "ABC.fasta" ISG would use "ABC" as the sample name to identify 
+the genome.
+
+Determining the sample name of a paired-end fastq separated into two distinct files 
+is more challenging because the sample name as well as the pairing information is 
+contained within the filename. For example, if two input files named "XYZ_1.fastq" 
+and "XYZ_2.fastq" were included in the input directory, ISG would recognize the 
+two files as a pair and use "XYZ" as the sample name to identify it. If ISG recognizes 
+an input file as paired and cannot locate the mate file, it will terminate with 
+an error. ISG determines if an input FASTQ is paired by using the following 
+regular expression:
+
+(.*)_[0-9]+_([12])_sequence\\..
+(.*)_[ATCG]+_L[0-9]+_R([12])_[0-9]+\\..*
+(.*)_S[0-9]+_L[0-9]+_R([12])_[0-9]+\\..*
+(.*)_R([12])[_\\.].*
+(.*)_([12])\\..*
+
+If a BAM or VCF is included in the input directory, ISG will read the file's header 
+to determine what sample name to identify the genome by. For BAMs, ISG will look at 
+the ReadGroup's SM field while for VCFs, ISG will look at the listed genotypes. 
+In both cases, if more than one sample name is found, ISG will exit immediately 
+and display an error.
+
+--------------------------------------------------------------------------------
+--OUTPUT FILES--
+--------------------------------------------------------------------------------
+
+Depending on what input files are specified, ISG may generate a lot of files in 
+the output directory. These files are organized in a directory structure that 
+facilitates finding the files by sample name.
+
+There are two subdirectories of the output directory that ISG creates for every 
+analysis: "samples" and "ref". The "samples" directory contains a subdirectory for each 
+sample. Inside each individual sample directory exists all the intermediate files 
+ISG generated for that particular sample. For example, let's say that your analysis 
+includes a raw reads file named "ABC.fastq". ISG will create a directory named 
+"ABC" (for a discussion on how ISG determines sample names see "SAMPLE NAMES"). 
+Inside that directory would be the following files (listed by extension): bam, 
+bai, bed, summary, and vcf. 
+
+The "ref" directory is created to store duplicated regions found in the reference as 
+well as any duplicated regions found in completely sequenced genomes. As such,
+there will always be a file named "ref.interval_list" that contains the repeated 
+regions found in the reference. Additionally, if other completely sequenced genomes 
+exists there will be files corresponding to the repeats found in those genomes.
+
+The rest of the output files reside at the root of the output directory and fall 
+into one of three categories: "all", "dups", and "unique". Each category contains 
+a SNP matrix file and a file representing the SNP matrix in a fasta format. 
+
+The "all" category contains variants detected by the pipeline where at least one sample 
+contains a "real" variant (i.e. not called the reference, missing, or ambiguous). 
+In addition to the SNP matrix and fasta file, the "all" category has a annotated 
+SNP matrix (all.variants.final.txt) and a statistics file (all.variants.final.txt.stats).
+
+The "unique" category contains a subset of variants from the "all" category that 
+do not overlap a duplicated (repeated) region.
+
+The "dups" category contains a subset of variants from the "all" category that 
+fall within a duplicated region.
+
+ambiguous.variants.txt - variants detected by the pipeline, but were marked as 
+ambiguous. None of the samples contain a "real" variant in this file.
  
-2. Copy the reference fasta file to the "analysis1" directory. This file must be named: "ref.fasta".
-
-3. Put the bams and their index files (bai) you want analyzed in the "analysis1/bams" directory. 
-
-4. Put the public genomes you want analyzed in the "analysis1/fastas" directory.
-
-5. If you have any genbank files cooresponding to your reference place them in the "analysis1/genbank" directory. There must be a genbank file for each chromosome in the reference. 
-
-6. Run ISGPipeline again, but this time specifiy any additional arguments. The only required arguments are ISG and MUMMER. 
-
-ex. java -jar ISGPipeline.jar ISG=analysis1 MUMMER=path/to/mummer
-
-The ISG argument must be the path to the directory created in step 1. The MUMMER argument must be the path to the root directory where Mummer is installed.
-
-7. When ISGPipeline is finished there will be a file called "isg_out.tab" in the "analysis1/out" directory. This file is a matrix of ALL SNPs found by the pipeline. 
-
-Please Note:
-ISGPipeline runs several external programs which can take a while to run. Solsnp 
-takes the longest, as it is being run in AllCallable mode. I do this so that I 
-can get the calls at each position of the genome which is why I set 
-MINIMUM_COVERAGE=0. After Solsnp completes, the ambiguous calls and 
-snp calls are filtered and placed into the directories vcf/ambiguous and vcf/snps 
-respectively. Then, ISGPipeline merges the snps using vcftools. Once this 
-completes, ISG is run on the merged vcf file and looks for positions where no 
-snp was called. If the position is covered and was not called ambiguous it gets 
-the reference state. If the position is covered but is ambiguous it gets called 
-'N'. These results are written to out/isg_out.tab.
-
-Command-line options
-
-ISG : 
-path to the root directory containing all the files required by the analysis.
-
-MUMMER: 
-Path to MUMmer.
-
-GATK: 
-Path to GenomeAnalysisTK.jar (version 2.1 or later)
-
-SOLSNP_OPTIONS_FILE
-Path to SolSNP options file. To get a list of all available options run SolSNP without any arguments.
-
-MIN_COVERAGE
-Minimum amount of reads to be considered covered. Default value is 3.
-
-MIN_SNP_COVERAGE
-Minimum amount of reads to call a snp. If a SNP is called by solSNP, but the coverage is below MIN_SNP_COVERAGE than that SNP will be considered ambiguous and will be called 'N' in the output matrix file. Default value is 3.
-
-MIN_QUAL
-Minimum genotype quality to be considered a snp. If a SNP is called by solSNP, but the genotype quality is below MIN_QAUL than that SNP will be considered ambiguous and will be called 'N' in the output matrix file. Default value is 4.
-
-FILTER
-Solsnp's minimum confidence score allowed for calls. Default value is .85
-
-NUM_THREADS
-Number of threads to run.
-
-overwrite
-Overwrite existing files
-
-confusion between MIN_COVERAGE and MIN_SNP_COVERAGE.
 
 --------------------------------------------------------------------------------
---DIRECTORY STRUCTURE--
+--OPTIONS FILE--
 --------------------------------------------------------------------------------
 
-ISGPipeline creates the following directory structure for each analysis:
+ISGPipeline allows the user to customize how each external program is run through 
+an options file provided when running ISGPipeline. An options file with default 
+values is provided in the dist/ directory of an ISGPipeline build. Below is an 
+example of using the --optionsfile argument:
 
-ROOT --> |---mummer
-         |
-         |---bams
-         |
-         |---coverage
-         |
-         |---fastas
-         |
-         |---genBank
-         |
-         |---out
-         |
-         |---vcf-->|---snps
-         |         |
-         |         |---ambiguous
-         |
-         |---ref.fasta
+java -jar ISGPipeline.jar -S ISGPipelineQScript.scala \
+     -isg analysis1 \
+     --optionsfile path/to/optionsfile.txt
+     -run
 
+This file is a key/value properties file where each key represents 
+an argument to one of the programs ISGPipeline runs and the value corresponds to 
+how that argument is to be used. The key is formatted as follows 
+<program identifier>.<argument name>, where the program identifier is a unique id 
+internal to ISGPipeline that identifies the program this argument applies to. 
+The "argument name" is the name of the argument for the program. For example, 
+the following two lines are found in the options file:
 
-ROOT
-the highest level directory ISGPipeline uses for an analysis. You should name 
-this file something meaningful describing your analysis. 
+UnifiedGenotyper.outMode=EMIT_VARIANTS_ONLY
+#UnifiedGenotyper.contamination_fraction_to_filter=<double>
 
-ROOT-->mummer
-directory where mummer output is stored. Namely, coords and snps. ISGPipeline will automatically run
-mummer on any fasta files found in the fastas directory and write the results to this directory.
-
-ROOT-->coverage 
-directory containing coverage intervals for each bam and fasta used in the analysis. ISGPipeline will detect which
-regions are covered and write the results to this directory.
-
-ROOT-->fastas 
-directory containing fasta files to compare in the analysis. All fasta files in this directory will be used in the analysis.
-
-ROOT-->genBank
-directory containing genbank files. Genbank files are optional, but if provided, they will be used to annotate the snps.
-
-ROOT-->out
-directory containing ISGPipeline results. Two files will be written here: out.tab and merged.vcf
-
-ROOT-->vcf
-directory containing vcf files of all variants detected by mummer and solsnp. A vcf file is created for each genome in the analysis.
-
-ROOT-->vcf-->snps
-directory containing snps that pass filtering.
-
-ROOT-->vcf-->ambiguous
-directory containing snps that DO NOT pass filtering.
-
+In this example "UnifiedGenotyper" is the unique program identifier specifying 
+the UnifiedGenotyper program in the GATK. The first line specifies the "outMode"
+argument and its value "EMIT_VARIANTS_ONLY". Since this line is uncommented 
+(doesn't begin with a '#') it is active and will be used whenever Unified Genotyper
+is executed by ISGPipeline. The second line specifies the argument
+"contamination_fraction_to_filter" with a placeholder value <double>. This argument 
+is not active because it begins with '#' and will be ignored by ISGPipeline. If 
+you would like to set the "contamination_fraction_to_filter" argument, simply 
+uncomment that line by removing the '#' character and replace the <double> with 
+a numeric value within the range specified in GATK's documentation.
 
 --------------------------------------------------------------------------------
 --DEPENDENCIES--
@@ -174,4 +214,5 @@ be installed on the machine where ISGPipeline is run. You can specify the path
 to each dependency using the options from the command line.
 
 -MUMmer 3+ (http://sourceforge.net/projects/mummer/)
--GATK (optional)
+-GATK
+-BWA

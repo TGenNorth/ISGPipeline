@@ -1,0 +1,94 @@
+# To change this template, choose Tools | Templates
+# and open the template in the editor.
+
+#####################
+# BWA
+#####################
+
+# aln
+bwa.aln.n=0.04
+bwa.aln.o=1
+bwa.aln.e=-1
+bwa.aln.i=5
+bwa.aln.d=10
+bwa.aln.l=32
+bwa.aln.k=2
+bwa.aln.m=2000000
+bwa.aln.t=1
+bwa.aln.M=3
+bwa.aln.O=11
+bwa.aln.E=4
+bwa.aln.R=30
+bwa.aln.q=0
+bwa.aln.L=false
+bwa.aln.N=false
+bwa.aln.Y=false
+
+# sampe
+bwa.sampe.a=500
+bwa.sampe.o=100000
+bwa.sampe.n=3
+bwa.sampe.N=10
+bwa.sampe.c=1.0e-05
+bwa.sampe.P=false
+bwa.sampe.s=false
+bwa.sampe.A=false
+
+
+
+#####################
+# MUMmer
+#####################
+
+# nucmer
+nucmer.breaklen=200
+nucmer.mincluster=65
+nucmer.diagfactor=0.12
+nucmer.maxgap=90
+nucmer.minmatch=20
+nucmer.forward=false
+nucmer.reverse=false
+
+# delta-filter
+delta-filter.g=true
+delta-filter.i=0
+delta-filter.l=0
+delta-filter.q=true
+delta-filter.r=true
+delta-filter.u=0
+delta-filter.o=75
+
+
+#####################
+# GATK
+#####################
+
+#####################
+# CallableLoci
+#####################
+#CallableLoci.maxFractionOfReadsWithLowMAPQ=<double>
+#CallableLoci.maxDepth=<int>
+#CallableLoci.maxLowMAPQ=<byte>
+#CallableLoci.minBaseQuality=<byte>
+#CallableLoci.minMappingQuality=<byte>
+#CallableLoci.minDepth=<int>
+#CallableLoci.minDepthForLowMAPQ=<int>
+
+#####################
+# UnifiedGenotyper
+#####################
+UnifiedGenotyper.outMode=EMIT_VARIANTS_ONLY
+UnifiedGenotyper.genotype_likelihoods_model=BOTH
+UnifiedGenotyper.standard_min_confidence_threshold_for_calling=0
+UnifiedGenotyper.standard_min_confidence_threshold_for_emitting=0
+UnifiedGenotyper.min_base_quality=0
+#UnifiedGenotyper.contamination_fraction_to_filter=<double>
+#UnifiedGenotyper.heterozygosity=<double>
+#UnifiedGenotyper.indelHeterozygosity=<double>
+#UnifiedGenotyper.maxDeletionFraction=<double>
+#UnifiedGenotyper.min_indel_count_for_genotyping=<integer>
+#UnifiedGenotyper.min_indel_fraction_per_sample=<double>
+#UnifiedGenotyper.pair_hmm_implementation=<EXACT,ORIGINAL,LOGLESS_CACHING>
+#UnifiedGenotyper.pcr_error_rate=<double>
+#UnifiedGenotyper.indelGapContinuationPenalty=<byte>
+#UnifiedGenotyper.indelGapOpenPenalty=<byte>

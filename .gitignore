@@ -1,5 +1,4 @@
 /nbproject/private/
-/build/
+/.queue/
 /dist/
-/store/
-/bin
+/build/

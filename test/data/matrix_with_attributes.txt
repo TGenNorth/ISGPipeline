@@ -1,0 +1,1 @@
+#numSamples=3								Chrom	Pos	Ref	S1	S2	S3	S1:attr	S2:attr	S3:attrchr1	1	A	T	T	T	S1	S2	S3chr1	10	C	G	C	C	S1	S2	S3chr1	15	T	A	.	N	S1	S2	S3chr2	1	G	T	T	G	S1	S2	S3
