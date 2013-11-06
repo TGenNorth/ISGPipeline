@@ -121,7 +121,7 @@ class ISGPipelineQScript extends QScript {
     val sb = new StringBuilder();
     val format = "%nArgument with name '--%s' (-%s) is missing."
       
-    if(isgRoot==null && (outputDir==null || inputDir==null || referenceSequence!=null)){
+    if(isgRoot==null && (outputDir==null || inputDir==null || referenceSequence==null)){
       
       if(outputDir==null){
         sb.append( String.format(format, "output_dir", "O") );
@@ -168,7 +168,7 @@ class ISGPipelineQScript extends QScript {
       outputDir = mkdir(new File(isgRoot, "out"))
     }else if(outputDir!=null && inputDir!=null && referenceSequence!=null){
       //validate inputs
-      IoUtil.assertDirectoryIsWritable(outputDir)
+      IoUtil.assertDirectoryIsWritable(outputDir.getParentFile)
       IoUtil.assertDirectoryIsReadable(inputDir)
       IoUtil.assertFileIsReadable(referenceSequence)
       IoUtil.assertFileSizeNonZero(referenceSequence)
