@@ -147,6 +147,10 @@ class ISGPipelineQScript extends QScript {
     if(pathToBWA!=null){
       util.IoUtil.assertFileIsExecutable(new File(pathToBWA))
     }
+    
+    if(referenceSequence!=null){
+      IoUtil.assertDirectoryIsWritable(referenceSequence.getParentFile)
+    }
 
   } 
   
@@ -168,7 +172,6 @@ class ISGPipelineQScript extends QScript {
       outputDir = mkdir(new File(isgRoot, "out"))
     }else if(outputDir!=null && inputDir!=null && referenceSequence!=null){
       //validate inputs
-      IoUtil.assertDirectoryIsWritable(outputDir.getParentFile)
       IoUtil.assertDirectoryIsReadable(inputDir)
       IoUtil.assertFileIsReadable(referenceSequence)
       IoUtil.assertFileSizeNonZero(referenceSequence)
@@ -269,6 +272,8 @@ class ISGPipelineQScript extends QScript {
       val uniqueFasta = new File(outputDir, "unique.variants.fasta")
       val dups = new File(outputDir, "dups.variants.txt")
       val dupsFasta = new File(outputDir, "dups.variants.fasta")
+      val clean = new File(outputDir, "clean.unique.variants.txt")
+      val cleanFasta = new File(outputDir, "clean.unique.variants.fasta")
     
       var sampleDirs: List[File] = List()      
       for(sample : String <- inputResourceManager.samples){
@@ -285,8 +290,10 @@ class ISGPipelineQScript extends QScript {
       add(new BatchRunner(all, allFinal, programs))
       if(!DUPS_FILES.isEmpty){ 
         add(new FilterDups(allFinal, DUPS_FILES.toSeq, unique, dups))
+        add(new CleanMatrix(unique, clean))
         add(new FormatForTree(unique, uniqueFasta))
         add(new FormatForTree(dups, dupsFasta))
+        add(new FormatForTree(clean, cleanFasta))
       }
     }
   }
@@ -365,16 +372,19 @@ class ISGPipelineQScript extends QScript {
       if(!sampleDir.exists) sampleDir.mkdir
       
       val ref = stripExtension(referenceSequence)
-      val prefix = sampleDir.getPath + "/" + sampleName + "_" + sampleName
-      val selfCoords = new File(sampleDir, sampleName + "_" + sampleName + ".coords")
-      val refCoords = new File(sampleDir, ref + "_" + sampleName + ".coords")
+      val prefix = sampleDir.getPath + "/" + sampleName + "q_" + sampleName + "q"
+      val refPrefix = sampleDir.getPath + "/" + ref + "r_" + sampleName + "q"
+      val qryPrefix = sampleDir.getPath + "/" + sampleName + "q_" + ref + "r"
+      
+      val selfCoords = new File(prefix + ".coords")
+      val refCoords = new File(refPrefix + ".coords")
       val dups = new File(sampleDir, sampleName + ".dups")
       val cov = new File(sampleDir, sampleName + ".interval_list")
       val vcf = new File(sampleDir, sampleName + ".vcf")
 
       //find snps in both directions
-      val refSnps = mummer(sampleDir, referenceSequence, fasta, false)
-      val qrySnps = mummer(sampleDir, fasta, referenceSequence, true)
+      val refSnps = mummer(sampleDir, referenceSequence, fasta, false, refPrefix)
+      val qrySnps = mummer(sampleDir, fasta, referenceSequence, true, qryPrefix)
       add(new ToVcf(refSnps, qrySnps, vcf, sampleName, referenceSequence))
 
       //find dups
@@ -387,8 +397,7 @@ class ISGPipelineQScript extends QScript {
     }
 
     //add mummer alignment functions
-    def mummer(sampleDir: File, ref: File, qry: File, sortByQry: Boolean): File = {
-      val prefix = sampleDir.getPath + "/" + stripExtension(ref) + "_" + stripExtension(qry)
+    def mummer(sampleDir: File, ref: File, qry: File, sortByQry: Boolean, prefix: String): File = {
       val delta = new File(prefix + ".delta")
       val filtered = new File(prefix + ".filtered.delta")
       val snps = new File(prefix + ".snps")
@@ -694,6 +703,15 @@ class ISGPipelineQScript extends QScript {
   class FormatForTree(@Input in: File, @Output out: File) extends JavaCommandLineFunction {
     analysisName = "FormatForTree"
     javaMainClass = "isg.tools.FormatForTree"
+    
+    override def commandLine = super.commandLine + 
+      required("INPUT="+in) +  
+      required("OUTPUT="+out)
+  }
+  
+  class CleanMatrix(@Input in: File, @Output out: File) extends JavaCommandLineFunction {
+    analysisName = "CleanMatrix"
+    javaMainClass = "isg.tools.CleanMatrix"
     
     override def commandLine = super.commandLine + 
       required("INPUT="+in) +  
