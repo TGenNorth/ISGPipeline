@@ -27,6 +27,12 @@ for a locus must be genotyped by inspecting the reads covering the locus.
 --RELEASE NOTES--
 --------------------------------------------------------------------------------
 
+v0.16.9-1
+
+    -Added "clean.unique.variants" to output directory.
+    -Fixed issue when the reference fasta is included in the input directory.
+    -Display meaningful error message when the "-R" required option is omitted.
+
 v0.16.9
 
     -New, easier way of running ISG. Refer to "RUNNING ISGPipeline" section for details.
@@ -251,7 +257,7 @@ regions found in the reference. Additionally, if other completely sequenced geno
 exists there will be files corresponding to the repeats found in those genomes.
 
 The rest of the output files reside at the root of the output directory and fall 
-into one of three categories: "all", "dups", and "unique". Each category contains 
+into one of three categories: "all", "dups", "unique", and "clean". Each category contains 
 a SNP matrix file and a file representing the SNP matrix in a fasta format. 
 
 The "all" category contains variants detected by the pipeline where at least one sample 
@@ -264,6 +270,9 @@ do not overlap a duplicated (repeated) region.
 
 The "dups" category contains a subset of variants from the "all" category that 
 fall within a duplicated region.
+
+The "clean" category contains a subset of variants from the "unique" category that 
+only contain "real" SNPs.
 
 ambiguous.variants.txt - variants detected by the pipeline, but were marked as 
 ambiguous. None of the samples contain a "real" variant in this file.
