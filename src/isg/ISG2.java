@@ -34,8 +34,14 @@ import org.broadinstitute.variant.variantcontext.Allele;
 import org.broadinstitute.variant.variantcontext.VariantContext;
 import org.broad.tribble.TribbleIndexedFeatureReader;
 import org.broadinstitute.variant.variantcontext.Genotype;
+import org.broadinstitute.variant.variantcontext.writer.VariantContextWriter;
+import org.broadinstitute.variant.variantcontext.writer.VariantContextWriterFactory;
 import org.broadinstitute.variant.vcf.VCFCodec;
+import org.broadinstitute.variant.vcf.VCFConstants;
+import org.broadinstitute.variant.vcf.VCFFormatHeaderLine;
 import org.broadinstitute.variant.vcf.VCFHeader;
+import org.broadinstitute.variant.vcf.VCFHeaderLine;
+import org.broadinstitute.variant.vcf.VCFHeaderLineType;
 import util.FileUtils;
 
 /**
@@ -162,8 +168,14 @@ public class ISG2 extends CommandLineProgram {
         final VariantContextTabHeader vcHeader = new VariantContextTabHeader(Collections.EMPTY_LIST, getSampleNames());
         final VariantContextTabWriter allWriter = openFileForWriting(new File(OUT_DIR, ALL_VARIANTS_FILENAME));
         final VariantContextTabWriter ambiguousWriter = openFileForWriting(new File(OUT_DIR, AMBIGUOUS_VARIANTS_FILENAME));
-
+        final VariantContextWriter vcfWriter = VariantContextWriterFactory.create(new File(OUT_DIR, "all.vcf"), dict);
+        final Set<VCFHeaderLine> metadata = new HashSet<VCFHeaderLine>();
+        metadata.add(new VCFFormatHeaderLine(VCFConstants.GENOTYPE_KEY, 1, VCFHeaderLineType.String, "Genotype"));
+        VCFHeader header = new VCFHeader(metadata, new HashSet(getSampleNames()));
+        
+        
         //write header
+        vcfWriter.writeHeader(header);
         allWriter.writeHeader(vcHeader);
         ambiguousWriter.writeHeader(vcHeader);
 
@@ -173,6 +185,7 @@ public class ISG2 extends CommandLineProgram {
             VariantContext vc = iter.next();
             if (UNAMBIGUOUS_FILTER.pass(vc)) {
                 allWriter.add(vc);
+                vcfWriter.add(vc);
             } else {
                 ambiguousWriter.add(vc);
             }
@@ -183,6 +196,7 @@ public class ISG2 extends CommandLineProgram {
         }
 
         //close writers
+        vcfWriter.close();
         allWriter.close();
         ambiguousWriter.close();
     }

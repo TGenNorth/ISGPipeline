@@ -28,6 +28,8 @@ import mummer.snps.MumSnpToVcf
 import org.apache.commons.io.FileUtils
 import util.TypedProperties
 import util.GenomicFileUtils
+import util.SnpEffConfig
+import util.TranslationTable
 import org.broadinstitute.sting.commandline.Hidden
 import org.broadinstitute.sting.utils.exceptions.UserException
 import org.broadinstitute.sting.commandline.CommandLineProgram
@@ -57,6 +59,15 @@ class ISGPipelineQScript extends QScript {
   
   @Argument(doc="Path to mummer directory.", shortName="mummer", required=false)
   var pathToMummer: String = null
+  
+  @Argument(doc="Path to SnpEff jar file", fullName="snp_eff", shortName="eff", required=false)
+  var snpEffJarFile: File = null
+  
+  @Argument(doc="SnpEff database ID.", fullName="snp_eff_database", shortName="db", required=false)
+  var snpEffDatabase: String = null
+  
+  @Argument(doc="Path to chromosome translation table", fullName="chrom_translation_table", shortName="chr_tbl", required=false)
+  var chromTranslationTable: File = null
   
   @Argument(doc="Path to options file.", required=false)
   var optionsFile: File = null
@@ -105,6 +116,11 @@ class ISGPipelineQScript extends QScript {
     this.allowPotentiallyMisencodedQuals = allow_potentially_misencoded_quality_scores;
   }
   
+  trait UNIVERSAL_SNP_EFF_ARGS extends JavaCommandLineFunction {
+    this.jarFile = snpEffJarFile;
+    val configFile = new File(snpEffJarFile.getParentFile, "snpEff.config")
+  }
+  
   var fastaDir: File = _
   var mummerDir: File = _
   var readsDir: File = _
@@ -150,6 +166,18 @@ class ISGPipelineQScript extends QScript {
     
     if(referenceSequence!=null){
       IoUtil.assertDirectoryIsWritable(referenceSequence.getParentFile)
+    }
+    
+    if(snpEffJarFile!=null){
+      IoUtil.assertFileIsReadable(snpEffJarFile)
+    }
+    
+    if(snpEffJarFile!=null && snpEffDatabase==null){
+      throw new UserException( String.format(format, "snp_eff_database", "db") );
+    }
+    
+    if(snpEffJarFile==null && snpEffDatabase!=null){
+      throw new UserException( String.format(format, "snp_eff", "eff") );
     }
 
   } 
@@ -265,6 +293,8 @@ class ISGPipelineQScript extends QScript {
     
     //add isg
     if(!inputResourceManager.samples.isEmpty){
+      
+      val allEff = snpEff(new File(outputDir, "all.vcf"))
       val all = new File(outputDir, "all.variants.txt")
       val allFasta = new File(outputDir, "all.variants.fasta")
       val allFinal = new File(outputDir, "all.variants.final.txt")
@@ -280,12 +310,16 @@ class ISGPipelineQScript extends QScript {
         sampleDirs = new File(samplesoutputDir, sample) :: sampleDirs
       }
       
-      var programs = Array("CalculateMismatch", "DetermineStatus", "ClassifyMatrix")
+      var programs = Array("CalculateMismatch", "DetermineStatus")
       if(includePattern){
         programs +:= "CalculatePattern"
       }
+      if(snpEffJarFile==null){ //only classify if snpEff isn't specified
+        programs +:= "ClassifyMatrix"
+      }
       
       add(new ISG(referenceSequence, sampleDirs))
+      add(new VcfToTab(allEff, all))
       add(new FormatForTree(all, allFasta))
       add(new BatchRunner(all, allFinal, programs))
       if(!DUPS_FILES.isEmpty){ 
@@ -296,6 +330,35 @@ class ISGPipelineQScript extends QScript {
         add(new FormatForTree(clean, cleanFasta))
       }
     }
+  }
+  
+  def snpEff(vcf: File): File ={
+    if(snpEffJarFile==null) return vcf;
+    
+    val configFile = new File(snpEffJarFile.getParentFile, "snpEff.config")
+    val config = new SnpEffConfig(snpEffJarFile)
+    config.load(snpEffDatabase, configFile.getAbsolutePath)
+    
+    val eff: File = swapExt(vcf.getParent, vcf, ".vcf", ".eff.vcf")
+    val effGatk: File = swapExt(vcf.getParent, vcf, ".vcf", ".gatk.eff.vcf")
+    
+    if(chromTranslationTable!=null){
+      val translationTable = TranslationTable.load(chromTranslationTable)
+      config.validateChromosomeNames(GenomicFileUtils.extractSequenceNames(referenceSequence), translationTable)
+    
+      val tmp: File = swapExt(vcf.getParent, vcf, ".vcf", ".tmp.vcf")
+      val effTmp: File = swapExt(vcf.getParent, vcf, ".vcf", ".tmp.eff.vcf")
+      
+      add(new RenameChrom(vcf, chromTranslationTable, tmp, true))
+      add(new SnpEff(tmp, effTmp, snpEffDatabase, true))
+      add(new RenameChrom(effTmp, chromTranslationTable, eff))
+    }else{
+      config.validateChromosomeNames(GenomicFileUtils.extractSequenceNames(referenceSequence), null)
+      add(new SnpEff(vcf, eff, snpEffDatabase))
+    }
+    add(new SnpEffVariantAnnotator(vcf, eff, referenceSequence, effGatk))
+    
+    return effGatk
   }
   
   def initRef() {
@@ -649,7 +712,8 @@ class ISGPipelineQScript extends QScript {
     javaMainClass = "isg.ISG2"
     @Input var vcfFiles: Seq[File] = VCF_FILES.toSeq
     @Input(required = false) var covFiles: Seq[File] = COV_FILES.toSeq
-    @Output val allOut: File = new File(outputDir, "all.variants.txt")
+//    @Output val allOut: File = new File(outputDir, "all.variants.txt")
+    @Output val allVcf: File = new File(outputDir, "all.vcf")
     
     override def commandLine = super.commandLine + 
       repeat("SAMPLE_DIR=", sampleDirs, spaceSeparated=false) +
@@ -716,6 +780,61 @@ class ISGPipelineQScript extends QScript {
     override def commandLine = super.commandLine + 
       required("INPUT="+in) +  
       required("OUTPUT="+out)
+  }
+  
+  class VcfToTab(@Input in: File, @Output out: File) extends JavaCommandLineFunction {
+    analysisName = "VcfToTab"
+    javaMainClass = "isg.tools.VcfToTab"
+    
+    override def commandLine = super.commandLine + 
+      required("INPUT="+in) +  
+      required("OUTPUT="+out)
+  }
+  
+  class RenameChrom(@Input in: File, @Input translationTable: File, @Output out: File, intermediate: Boolean = false) extends JavaCommandLineFunction {
+    analysisName = "renameChrom"
+    javaMainClass = "isg.tools.RenameChr"
+    isIntermediate = intermediate
+    
+    override def commandLine = super.commandLine + 
+                               required("INPUT="+in) +  
+                               required("OUTPUT="+out) +
+                               required("TRANSLATION_TABLE="+translationTable)
+  }
+  
+  class SnpEff(@Input input: File, @Output out: File, dbName: String, intermediate: Boolean = false) extends UNIVERSAL_SNP_EFF_ARGS {
+    analysisName = "SnpEff_eff"
+    isIntermediate = intermediate
+    
+    override def commandLine = super.commandLine + 
+                               required("-c") +
+                               required(configFile) +
+                               required("-o") +
+                               required("gatk") +
+                               required("-v") +
+                               required(dbName) +
+                               required(input) +
+                               required(">", false) +
+                               required(out)
+  }
+  
+  class SnpEffVariantAnnotator(@Input in: File, @Input snpEff: File, @Input ref: File, @Output out: File) extends JavaCommandLineFunction {
+    @Input val dict: File = swapExt(ref.getParent, ref, ".fasta", ".dict")
+    this.jarFile = gatkJarFile;
+    
+    override def commandLine = super.commandLine + 
+                               required("-T") +
+                               required("VariantAnnotator") +
+                               required("-A") +
+                               required("SnpEff") +
+                               required("-V") +
+                               required(in) +
+                               required("-snpEffFile") +
+                               required(snpEff) +
+                               required("-R") +
+                               required(ref) +
+                               required("-o") +
+                               required(out)
   }
   
 }

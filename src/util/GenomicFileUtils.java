@@ -10,8 +10,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import net.sf.picard.reference.ReferenceSequence;
+import net.sf.picard.reference.ReferenceSequenceFile;
+import net.sf.picard.reference.ReferenceSequenceFileFactory;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMReadGroupRecord;
+import net.sf.samtools.SAMSequenceRecord;
 import org.broad.tribble.FeatureReader;
 import org.broad.tribble.TribbleIndexedFeatureReader;
 import org.broadinstitute.sting.utils.exceptions.UserException;
@@ -24,6 +28,17 @@ import org.broadinstitute.variant.vcf.VCFHeader;
  * @author jbeckstrom
  */
 public class GenomicFileUtils {
+    
+    public static List<String> extractSequenceNames(File fasta) throws IOException{
+        List<String> ret = new ArrayList<String>();
+        ReferenceSequenceFile refSeq = ReferenceSequenceFileFactory.getReferenceSequenceFile(fasta);
+        ReferenceSequence seq = null;
+        while((seq = refSeq.nextSequence()) != null){
+            final String seqName = seq.getName();
+            ret.add(seqName);
+        }
+        return ret;
+    }
     
     public static String extractFirstSampleName(File f) throws IOException{
         List<String> ret = extractSampleNames(f);

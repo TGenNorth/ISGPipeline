@@ -27,6 +27,10 @@ for a locus must be genotyped by inspecting the reads covering the locus.
 --RELEASE NOTES--
 --------------------------------------------------------------------------------
 
+v0.16.10
+
+    -Added SnpEff for annotating SNPs. Refer to "ANNOTATIONS" section for details.
+
 v0.16.9-1
 
     -Added "clean.unique.variants" to output directory.
@@ -83,7 +87,7 @@ Step 3:
     discussion on the output files and directory structure.
 
 --------------------------------------------------------------------------------
---Running Options--
+--RUNNING OPTIONS--
 --------------------------------------------------------------------------------
 
 To get a listing of optional/required arguments type the following:
@@ -118,6 +122,19 @@ Options:
  -mummer,--pathtomummer <pathtomummer>           
 
     Path to directory containing mummer executables.
+
+ -eff,--snp_eff <snp_eff>                                       
+
+    Path to SnpEff jar file
+
+ -db,--snp_eff_database <snp_eff_database>                      
+
+    SnpEff database ID.
+
+ -chr_tbl,--chrom_translation_table <chrom_translation_table>
+
+    Path to chromosome translation table. Refere to "ANNOTATIONS" section for 
+    details.
 
  --optionsfile <optionsfile>                     
 
@@ -216,6 +233,37 @@ and display an error.
 --------------------------------------------------------------------------------
 --ANNOTATIONS--
 --------------------------------------------------------------------------------
+
+ISG will annotate SNPs in the output matrix files using SnpEff. In order for 
+SnpEff to run, you must specify the location of the SnpEff jar file (-eff) and the 
+SnpEff database identifier (-db) of the genome you are using as the reference. To see 
+a list of all SnpEff databases you can run the following command:
+
+java -jar SnpEff.jar databases
+
+Once you have found the SnpEff database that corresponds to your reference sequence 
+make sure that the sequence headers match with the chromosome names found in the 
+SnpEff database. If you do not know the chromosome names used by SnpEff, you can 
+do a 'dry run' of ISG by running the ISG command without the "-run" option. If the 
+'dry run' completes successfully then you are good to go. However, if 
+you see an error message referring to mismatching chromosome names then you will 
+need to fix the chromosome names in your reference fasta or provide a translation 
+table before continuing. 
+
+ Translation Table
+
+A translation table is a file of key-value pairs that lists the sequence names of 
+your reference fasta file and the corresponding SnpEff database chromosome names.
+For example, if your reference fasta had the names "AmesA,AmesApX01,AmesApX02" and 
+the SnpEff database had the chromosome names ",pX01,pX02" (the first name is 
+intentionally left blank) then your translation table would look like this:
+
+AmesA=
+AmesApX01=px01
+AmesApX02=px02
+  
+
+**THE FOLLOWING IS DEPRECATED**
 
 ISG will annotate SNPs in the output matrix files if genbank file(s) are provided 
 in the input directory. ISG matches a sequence in the reference fasta file with 
@@ -325,3 +373,4 @@ to each dependency using the options from the command line.
 -MUMmer 3+ (http://sourceforge.net/projects/mummer/)
 -GATK (2.5+)
 -BWA
+-SnpEff 3.3+ (optional)
