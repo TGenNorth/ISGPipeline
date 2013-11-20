@@ -165,7 +165,7 @@ class ISGPipelineQScript extends QScript {
     }
     
     if(referenceSequence!=null){
-      IoUtil.assertDirectoryIsWritable(referenceSequence.getParentFile)
+      IoUtil.assertDirectoryIsWritable(referenceSequence.getAbsoluteFile().getParentFile())
     }
     
     if(snpEffJarFile!=null){
