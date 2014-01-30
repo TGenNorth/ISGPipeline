@@ -254,13 +254,13 @@ table before continuing.
 
 A translation table is a file of key-value pairs that lists the sequence names of 
 your reference fasta file and the corresponding SnpEff database chromosome names.
-For example, if your reference fasta had the names "AmesA,AmesApX01,AmesApX02" and 
-the SnpEff database had the chromosome names ",pX01,pX02" (the first name is 
+For example, if your reference fasta had the names "AmesA,AmesApXO1,AmesApXO2" and 
+the SnpEff database had the chromosome names ",pXO1,pXO2" (the first name is 
 intentionally left blank) then your translation table would look like this:
 
 AmesA=
-AmesApX01=px01
-AmesApX02=px02
+AmesApXO1=pXO1
+AmesApXO2=pXO2
   
 
 **THE FOLLOWING IS DEPRECATED**
