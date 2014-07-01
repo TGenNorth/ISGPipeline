@@ -271,7 +271,7 @@ class ISGPipelineQScript extends QScript {
     sequencePatterns.addPattern(new SequenceFilePairPattern("(.*)_([12])\\..*"))
     
     //create factories for detecting/creating input resources
-    val inputResourceFactory = new InputResourceFactoryImpl(sequencePatterns)
+    val inputResourceFactory = new InputResourceFactoryImpl(sequencePatterns, referenceSequence)
     val inputResourceManagerBuilder = new InputResourceManagerBuilder(inputResourceFactory)
     
     //add input files

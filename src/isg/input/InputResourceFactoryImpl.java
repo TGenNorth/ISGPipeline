@@ -24,10 +24,16 @@ import util.GenomicFileUtils;
 public class InputResourceFactoryImpl {
 
     private final Set<File> alreadyUsedFastqs = new HashSet<File>();
+    private final File ref;
     private final SequenceFilePairPatterns patterns;
 
     public InputResourceFactoryImpl(SequenceFilePairPatterns patterns) {
+        this(patterns, null);
+    }
+    
+    public InputResourceFactoryImpl(SequenceFilePairPatterns patterns, File ref) {
         this.patterns = patterns;
+        this.ref = ref;
     }
 
     public InputResource<?> create(File f) throws IOException, UserException {
@@ -35,6 +41,9 @@ public class InputResourceFactoryImpl {
     }
 
     public InputResource<?> create(File f, InputResourceType type) throws IOException, UserException {
+        if(ref!=null && f.equals(ref)){ //ignore reference file
+            return null;
+        }
         switch (type) {
             case BAM:
                 return BamInputResource.create(f);

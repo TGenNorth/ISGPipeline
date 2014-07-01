@@ -65,4 +65,12 @@ public class InputResourceFactoryTest {
         InputResource<File> expected = new FastqInputResource("ABC", new File("ABC.fastq"));
         assertEquals(expected, result);
     }
+    
+    @Test
+    public void testIgnoreRef() throws Exception {
+        System.out.println("createRef");
+        InputResourceFactoryImpl instance = new InputResourceFactoryImpl(patterns, new File("ref.fasta"));
+        InputResource<?> result = instance.create(new File("ref.fasta"));
+        assertNull(result);
+    }
 }
