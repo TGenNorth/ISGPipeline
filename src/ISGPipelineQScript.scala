@@ -103,6 +103,9 @@ class ISGPipelineQScript extends QScript {
   @Argument(doc="Include pattern fields in output matrix.", required=false)
   var includePattern: Boolean = false
   
+  @Argument(doc="Filter duplicates of query genomes.", required=false)
+  var filterDups: Boolean = false
+  
   var VCF_FILES: Set[File] = Set()
   var COV_FILES: Set[File] = Set()
   var DUPS_FILES: Set[File] = Set()
@@ -456,7 +459,7 @@ class ISGPipelineQScript extends QScript {
       add(new FindParalogs(selfCoords, refCoords, referenceSequence, dups))
       addVcf(vcf)
       addCov(cov)
-      addDups(dups)
+      if(filterDups) addDups(dups)
     }
 
     //add mummer alignment functions
