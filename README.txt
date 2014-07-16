@@ -2,30 +2,53 @@
 --DESCRIPTION--
 --------------------------------------------------------------------------------
 
-ISG (In-Silico Genotyper) uses BWA to align NGS reads against the reference 
-(creating bam files), and it uses MUMmer to align fasta-formatted, sequenced genomes to call SNPs. It then 
-uses the GATK Unified Genotyper to call and determine ambiguity of SNPs from the 
-bam files, and puts them into vcf format.  ISG performs "intelligent" alignment, 
-using data at whatever stage they are provided (e.g., reads, bams, vcfs, fastas). 
-Adding further sample files and rerunning will process the new additions and create 
-a new variant matrix. All previously called variant loci are checked in the new samples, 
-and any newly found variant positions are checked/verified in the earlier samples.
+ISG (In-Silico Genotyper) creates a matrix of SNPs across multiple taxa. At its core, ISG 
+merges single sample variant calls (i.e., SNPs and indels in vcf format) for a shared 
+sequence region into a matrix. Because not every sample has genotype information for a 
+particular locus and not every genotyped locus is necessarily correct, ISG expects that 
+many of the variants called are false positives in order to prevent incorrectly assuming the 
+reference state. Therefore, two important steps have been added to the merging process. 
+First, variants from each sample are analyzed for ambiguity and marked as such before 
+further processing. Second, samples without genotype information for a locus are genotyped 
+in an intelligent way.
 
-ISG creates a matrix of SNPs across multiple taxa. At its core, ISG 
-merges single sample VCF files into a matrix. However, it is more complicated than 
-that because not every sample has genotype information for a particular locus and 
-not every genotyped locus is necessarily correct. In fact, ISG expects that many 
-of the variants called are false positives in order to prevent incorrectly assuming 
-the reference state. Therefore, two important steps must be added to the merging 
-process. First, variants from each sample must be analyzed for ambiguity and marked 
-as such before further processing. Second, samples without genotype information 
-for a locus must be genotyped by inspecting the reads covering the locus.
-
-
+ISG uses BWA to align NGS reads against the reference (creating bam files), and it uses 
+MUMmer to align fasta-formatted, sequenced genomes and call SNPs. It then uses the GATK 
+Unified Genotyper to call and determine ambiguity of SNPs from the bam files, and puts 
+them into VCF format.  ISG performs "intelligent" alignment, using data at whatever stage 
+they are provided (e.g., reads, bams, vcfs, fastas). Adding further sample files and 
+rerunning will process the new additions and create a new variant matrix. All previously 
+called variant loci are checked in the new samples, and any newly found variant positions 
+are checked/verified in the earlier samples.
+ 
+The ISG Tools are a collection of java command line utilities that manipulate/annotate the 
+results of ISGPipeline (summarized below):
+  CalculateMismatch.jar -calculate mismatch distance between adjacent SNPs
+  CalculatePattern.jar - calculate pattern of SNP states among samples for each locus
+  CalculateStatistics.jar - calculate overall variant statistics for each sample 
+  ClassifyMatrix.jar - classify SNPs in matrix as (non)synonymous, intergenic, etc.
+  CleanMatrix.jar - remove matrix loci containing ambiguous or missing alleles 
+  DetermineStatus.jar - marks status of each locus (e.g., clean, ambiguous, missing, 
+   duplicated, etc.)
+  FilterMatrix.jar - filter a matrix based on specific parameters
+  FindParalogs.jar - find and mark duplicated regions in matrix based on self comparisons 
+   of reference and other individual whole genomes
+  RemoveGenomes.jar - removes user-specified genomes from a matrix
+  ISGToolsBatchRunner.jar - runs a user-specified set of ISG Tools sequentially in batch mode
 
 --------------------------------------------------------------------------------
 --RELEASE NOTES--
 --------------------------------------------------------------------------------
+
+v0.16.10-2
+
+    - Filtering of duplicate loci in query genomes is optionally selected using "--filterdups" flag.
+    - Fixed memory leak when writing large pseudo-fasta files of SNPs for each taxon.
+
+v0.16.10-1
+
+    - The reference FASTA file must be placed in the INPUT directory with all other input files. 
+The -R flag must be used to designate the reference file, which will be ignored as a sample file in the comparisons.
 
 v0.16.10
 
@@ -41,8 +64,7 @@ v0.16.9
 
     -New, easier way of running ISG. Refer to "RUNNING ISGPipeline" section for details.
     -Include fasta representation for each output matrix.
-    -Improved error message descriptions.
-    -Added early validation of input files and arguments.
+    -Improved error handling for validating input files.
     -Optionally include calculation of pattern number fields.
     -Display argument defaults on splash screen.
     -Calculate allele frequency from AD field instead of pre-calculated AF field.
@@ -54,8 +76,12 @@ v0.16.9
 --------------------------------------------------------------------------------
 
 First, make sure that you have all the dependencies installed on your machine. 
-Please review the "DEPENDENCIES" section of the README to find out what programs 
+Please review the "DEPENDENCIES" section of this README to find out what programs 
 are required and where to get them.
+
+To get a listing of optional/required arguments type the following:
+
+java -jar ISGPipeline.jar -S ISGPipelineQScript.scala -h
 
 
 Steps to run an analysis:
@@ -117,15 +143,15 @@ Options:
 
  -bwa,--pathtobwa <pathtobwa>                    
 
-    Path to bwa executable.
+    Path to bwa executable. Requires version 0.6.2+
 
  -mummer,--pathtomummer <pathtomummer>           
 
-    Path to directory containing mummer executables.
+    Path to directory containing mummer executables. Requires version 3.23+
 
  -eff,--snp_eff <snp_eff>                                       
 
-    Path to SnpEff jar file
+    Path to SnpEff jar file. Requires version 3.3h+
 
  -db,--snp_eff_database <snp_eff_database>                      
 
@@ -167,31 +193,34 @@ Options:
 
  --usebwamem                                     
 
-    Run bwa mem algorithm. Setting this flag requires bwa version 0.7+
+    Run bwa mem algorithm. Setting this flag requires bwa version 0.7.5a+
 
  --includepattern                                
 
     Include pattern fields in output matrix.
 
  -nt,--num_threads <num_threads>
-
+   
     How many CPU threads should be allocated?
-
-
+ 
+ -pbs
+ 
+ 	Use PBS queueing system for job scheduling
+ 	 
 --------------------------------------------------------------------------------
 --INPUT FILES--
 --------------------------------------------------------------------------------
 
 All input files must reside at the root of a single directory to be included in an ISG analysis. 
-Within the input directory, ISG uses file extensions to determine the type of file. Below is a list of file 
-types and supported extensions. Any file with an extension not listed below will be
-ignored by ISG.
+Within the input directory, ISG uses file extensions to determine the type of file. 
+Below is a list of file types and supported extensions. 
+Any file with an extension not listed below will be ignored by ISG.
 
-BAM     - .bam
-FASTQ   - .fastq, .fastq.gz, sequence.txt, sequence.txt.gz
-VCF     - .vcf
-GENBANK - .gbk, .gb
-FASTA   - .fasta, .fa
+BAM     - .bam (NGS reads aligned against a reference)
+FASTQ   - .fastq, .fastq.gz, sequence.txt, sequence.txt.gz (NGS reads)
+VCF     - .vcf (variants from bams and/or fastas)
+GENBANK - .gbk, .gb (GenBank annotations of reference)
+FASTA   - .fasta, .fa (contigs or whole genomes in fasta format)
 
 --------------------------------------------------------------------------------
 --SAMPLE NAMES--
@@ -254,20 +283,20 @@ table before continuing.
 
 A translation table is a file of key-value pairs that lists the sequence names of 
 your reference fasta file and the corresponding SnpEff database chromosome names.
-For example, if your reference fasta had the names "AmesA,AmesApXO1,AmesApXO2" and 
-the SnpEff database had the chromosome names ",pXO1,pXO2" (the first name is 
+For example, if your reference fasta had the names "AmesA,AmesApX01,AmesApX02" and 
+the SnpEff database had the chromosome names ",pX01,pX02" (the first name is 
 intentionally left blank) then your translation table would look like this:
 
 AmesA=
-AmesApXO1=pXO1
-AmesApXO2=pXO2
+AmesApX01=px01
+AmesApX02=px02
   
 
 **THE FOLLOWING IS DEPRECATED**
 
-ISG will annotate SNPs in the output matrix files if genbank file(s) are provided 
+ISG will annotate SNPs in the output matrix files if GenBank file(s) are provided 
 in the input directory. ISG matches a sequence in the reference fasta file with 
-a genbank file by using the genbank's filename. For example, consider the following 
+a GenBank file by using the GenBank filename. For example, consider the following 
 reference fasta file:
 
 >ABC
@@ -275,10 +304,10 @@ ATCGA....ATGC
 >XYZ
 ATTC....AATTC
 
-ISG will use the sequence headers (ABC and XYZ) to find the corresponding genbank
+ISG will use the sequence headers (ABC and XYZ) to find the corresponding GenBank
 files (ABC.gbk and XYZ.gbk) in the input directory. Thus, it is important that 
-there is a genbank file for each sequence in the reference fasta and that each 
-genbank file is named identically to the header of the corresponding sequence in 
+there is a GenBank file for each sequence in the reference fasta and that each 
+GenBank file is named identically to the header of the corresponding sequence in 
 the reference fasta file.  
 
 --------------------------------------------------------------------------------
@@ -291,52 +320,50 @@ facilitates finding the files by sample name.
 
 There are two subdirectories of the output directory that ISG creates for every 
 analysis: "samples" and "ref". The "samples" directory contains a subdirectory for each 
-sample. Inside each individual sample directory exists all the intermediate files 
-ISG generated for that particular sample. For example, let's say that your analysis 
+sample. Inside each individual sample directory exists all the intermediate files ISG 
+generated for that particular sample. For example, let's say that your analysis 
 includes a raw reads file named "ABC.fastq". ISG will create a directory named 
 "ABC" (for a discussion on how ISG determines sample names see "SAMPLE NAMES"). 
-Inside that directory would be the following files (listed by extension): bam, 
+Inside that directory are the following files (listed by extension): bam, 
 bai, bed, summary, and vcf. 
 
 The "ref" directory is created to store duplicated regions found in the reference as 
 well as any duplicated regions found in completely sequenced genomes. As such,
 there will always be a file named "ref.interval_list" that contains the repeated 
 regions found in the reference. Additionally, if other completely sequenced genomes 
-exists there will be files corresponding to the repeats found in those genomes.
+exist, there will be files corresponding to the repeats found in those genomes.
 
 The rest of the output files reside at the root of the output directory and fall 
-into one of three categories: "all", "dups", "unique", and "clean". Each category contains 
+into one of three categories: "all", "dups", and "unique". Each category contains 
 a SNP matrix file and a file representing the SNP matrix in a fasta format. 
 
 The "all" category contains variants detected by the pipeline where at least one sample 
-contains a "real" variant (i.e. not called the reference, missing, or ambiguous). 
-In addition to the SNP matrix and fasta file, the "all" category has an annotated 
+contains a "real" variant (i.e., not called the reference state, missing, or ambiguous). 
+In addition to the SNP matrix and fasta file, the "all" category contains an annotated 
 SNP matrix (all.variants.final.txt) and a statistics file (all.variants.final.txt.stats).
 
 The "unique" category contains a subset of variants from the "all" category that 
 do not overlap a duplicated (repeated) region.
 
 The "dups" category contains a subset of variants from the "all" category that 
-fall within a duplicated region.
+fall within any duplicated region(s).
 
-The "clean" category contains a subset of variants from the "unique" category that 
-only contain "real" SNPs.
-
-ambiguous.variants.txt - variants detected by the pipeline, but were marked as 
-ambiguous. None of the samples contain a "real" variant in this file.
+Ambiguous variants (ambiguous.variants.txt) are variants detected by the pipeline, 
+but which were marked as ambiguous. None of the samples contain a "real" variant in this file.
  
 
 --------------------------------------------------------------------------------
 --OPTIONS FILE--
 --------------------------------------------------------------------------------
 
-ISGPipeline allows the user to customize how each external program is run through 
+ISGPipeline allows the user to customize how each external program is run using 
 an options file provided when running ISGPipeline. An options file with default 
 values is provided in the dist/ directory of an ISGPipeline build. Below is an 
 example of using the --optionsfile argument:
 
 java -jar ISGPipeline.jar -S ISGPipelineQScript.scala \
-     -isg analysis1 \
+     -I in \
+     -O out \
      --optionsfile path/to/optionsfile.txt
      -run
 
@@ -366,11 +393,12 @@ a numeric value within the range specified in GATK's documentation.
 --DEPENDENCIES--
 --------------------------------------------------------------------------------
 
-ISGPipeline requires several external programs (dependencies) to run properly. Each dependency must 
-be installed on the machine where ISGPipeline is run. You can specify the path 
-to each dependency using the options from the command line.
+ISGPipeline requires several external programs (dependencies) to run properly. 
+Each dependency must be installed on the machine where ISGPipeline is run. 
+You can specify the path to each dependency using the options from the command line.
 
--MUMmer 3+ (http://sourceforge.net/projects/mummer/)
+-MUMmer 3.3+ (http://sourceforge.net/projects/mummer/)
 -GATK (2.5+)
--BWA
+-BWA (0.6.2+)
 -SnpEff 3.3+ (optional)
+
