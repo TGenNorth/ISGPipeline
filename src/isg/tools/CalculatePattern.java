@@ -76,12 +76,12 @@ public class CalculatePattern extends CommandLineProgram {
         
         writer.writeHeader(header);
 
-        final PatternNumGenerator patNumGen = new PatternNumGenerator(header.getGenotypeNames());
+//        final PatternNumGenerator patNumGen = new PatternNumGenerator(header.getGenotypeNames());
         VariantContext record = null;
         while ((record = reader.nextRecord()) != null) {
             VariantContextBuilder vcb = new VariantContextBuilder(record);
             Map<String, String> pattern = PatternBuilder.generatePattern(record, header.getGenotypeNames());
-            int patNum = patNumGen.getPatternNum(pattern);
+//            int patNum = patNumGen.getPatternNum(pattern);
             
             GenotypesContext gcntxt = record.getGenotypes();
             List<Genotype> genotypes = new ArrayList<Genotype>();
@@ -89,7 +89,7 @@ public class CalculatePattern extends CommandLineProgram {
                 genotypes.add(new GenotypeBuilder(g).attribute(HeaderAttribute.PATTERN_STR, pattern.get(g.getSampleName())).make());
             }
             vcb.genotypes(genotypes);
-            vcb.attribute(HeaderAttribute.PAT_NUM_STR, patNum);
+//            vcb.attribute(HeaderAttribute.PAT_NUM_STR, patNum);
             
             writer.add(vcb.make());
         }
