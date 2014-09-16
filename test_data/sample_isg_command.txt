@@ -1,0 +1,4 @@
+java -jar /scratch/jsahl/tools/ISG/v0.16.10-2/ISGPipeline-0.16.10-2.jar \
+-S /scratch/jsahl/tools/ISG/v0.16.10-2/ISGPipelineQScript.scala -I ISG_in/ \
+-O ISG_out/ -R YP_CO92.fasta -gatk /scratch/jsahl/tools/UGAP/bin/GenomeAnalysisTK.jar \
+-bwa /packages/bwa/0.7.5a/bwa --usebwamem -nt 6 -mummer /packages/MUMmer/3.23/ -run
