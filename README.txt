@@ -1,4 +1,11 @@
 --------------------------------------------------------------------------------
+--DOWNLOAD--
+--------------------------------------------------------------------------------
+Compiled JAR files can be downloaded from:
+
+https://sourceforge.net/projects/insilicogenotyp/
+
+--------------------------------------------------------------------------------
 --DESCRIPTION--
 --------------------------------------------------------------------------------
 
@@ -401,4 +408,30 @@ You can specify the path to each dependency using the options from the command l
 -GATK (2.5+)
 -BWA (0.6.2+)
 -SnpEff 3.3+ (optional)
+
+---------------------------------------------------------------------------------
+--TEST DATA--
+---------------------------------------------------------------------------------
+
+To test that ISG and all dependencies are installed correctly, test data is included
+with the distribution.  The files consist of:
+
+-Reference chromosome (Yersinia pestis Colorado 92)
+-Short, paired-end reads from Yersinia pestis EV76 (SRR069197).  Reads have been
+ sub-sampled to a reasonable level
+-Binary alignment map (BAM) file.  BAM file was generated with BWA-MEM from short
+ reads from Y. pestis EV76
+-Variant call format (VCF) file.  VCF was generated with GATK from BAM file included above.
+-Genome assembly in FASTA format.  Short reads were from EV76 were assembled with SPAdes.
+-GenBank file for CO92.  This will be used for annotation
+
+All of these files, except for the reference genome are in test_data/ISG_in.  To run, enter
+the ISG folder and do:
+
+java -jar ISGPipeline.jar -S ISGPipelineQScript.scala -I test_data/ISG_in/ -O isg_out \
+-R test_data/YP_CO92.fasta -bwa PATH_TO/bwa -gatk PATH_TO/GenomeAnalysisTK.jar 
+--usebwamem -mummer PATH_TO/MUMmer3.23
+
+If this completes without incident, add "-run" to the end of the script and re-run.  This
+dataset should finish, even on a laptop, in a reasonable time frame
 
