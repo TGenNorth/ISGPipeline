@@ -82,6 +82,11 @@ v0.16.9
 --RUNNING ISGPipeline--
 --------------------------------------------------------------------------------
 
+-Prior to running ISG, make sure that your system ULIMIT is set to handle multiple
+ processes.  You can add this command to your ".bashrc" or ".profile":
+ 
+ulimit -u 4096
+
 First, make sure that you have all the dependencies installed on your machine. 
 Please review the "DEPENDENCIES" section of this README to find out what programs 
 are required and where to get them.
@@ -299,20 +304,18 @@ AmesApX01=px01
 AmesApX02=px02
   
 
-**THE FOLLOWING IS DEPRECATED**
+--ISG annotation
 
 ISG will annotate SNPs in the output matrix files if GenBank file(s) are provided 
 in the input directory. ISG matches a sequence in the reference fasta file with 
 a GenBank file by using the GenBank filename. For example, consider the following 
 reference fasta file:
 
->ABC
+>gi|16120353|ref|NC_003143.1| Yersinia pestis CO92 chromosome, complete genome
 ATCGA....ATGC
->XYZ
-ATTC....AATTC
 
-ISG will use the sequence headers (ABC and XYZ) to find the corresponding GenBank
-files (ABC.gbk and XYZ.gbk) in the input directory. Thus, it is important that 
+ISG will use the sequence headers to find the corresponding GenBank
+files (gi|16120353|ref|NC_003143.1|.gbk) in the input directory. Thus, it is important that 
 there is a GenBank file for each sequence in the reference fasta and that each 
 GenBank file is named identically to the header of the corresponding sequence in 
 the reference fasta file.  
@@ -404,10 +407,10 @@ ISGPipeline requires several external programs (dependencies) to run properly.
 Each dependency must be installed on the machine where ISGPipeline is run. 
 You can specify the path to each dependency using the options from the command line.
 
--MUMmer 3.3+ (http://sourceforge.net/projects/mummer/)
--GATK (2.5+)
--BWA (0.6.2+)
--SnpEff 3.3+ (optional)
+-MUMmer - tested version is 3.23 (http://sourceforge.net/projects/mummer/)
+-GATK - tested version is 2.7.2 (issues have been observed with GATK 3+) (https://www.broadinstitute.org/gatk/) 
+-BWA - tested version if 0.7.5 (http://bio-bwa.sourceforge.net/)
+-SnpEff - tested version is 3.3 (http://snpeff.sourceforge.net/) (optional)
 
 ---------------------------------------------------------------------------------
 --TEST DATA--
