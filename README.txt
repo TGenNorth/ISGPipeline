@@ -29,10 +29,11 @@ called variant loci are checked in the new samples, and any newly found variant 
 are checked/verified in the earlier samples.
  
 The ISG Tools are a collection of java command line utilities that manipulate/annotate the 
-results of ISGPipeline (summarized below):
-  CalculateMismatch.jar -calculate mismatch distance between adjacent SNPs
+results of ISGPipeline More details for each of the tools, including arguments, are found in 
+README_TOOLS.txt. Their basic functions are summarized below:
+  CalculateMismatch.jar -calculate smallest mismatch distance between adjacent SNPs
   CalculatePattern.jar - calculate pattern of SNP states among samples for each locus
-  CalculateStatistics.jar - calculate overall variant statistics for each sample 
+  CalculateStatistics.jar - calculate overall variant statistics for each sample in matrix 
   ClassifyMatrix.jar - classify SNPs in matrix as (non)synonymous, intergenic, etc.
   CleanMatrix.jar - remove matrix loci containing ambiguous or missing alleles 
   DetermineStatus.jar - marks status of each locus (e.g., clean, ambiguous, missing, 
@@ -46,6 +47,10 @@ results of ISGPipeline (summarized below):
 --------------------------------------------------------------------------------
 --RELEASE NOTES--
 --------------------------------------------------------------------------------
+
+v0.16.10-3
+
+    - Fixed memory leak when creating pattern number. Pattern number is no longer produced.
 
 v0.16.10-2
 
@@ -424,7 +429,7 @@ with the distribution.  The files consist of:
  sub-sampled to a reasonable level
 -Binary alignment map (BAM) file.  BAM file was generated with BWA-MEM from short
  reads from Y. pestis EV76
--Variant call format (VCF) file.  VCF was generated with GATK from BAM file included above.
+-Variant call format (VCF) file.  VCF was generated with GATK from BAM file included qabove.
 -Genome assembly in FASTA format.  Short reads were from EV76 were assembled with SPAdes.
 -GenBank file for CO92.  This will be used for annotation
 
