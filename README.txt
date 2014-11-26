@@ -413,9 +413,20 @@ Each dependency must be installed on the machine where ISGPipeline is run.
 You can specify the path to each dependency using the options from the command line.
 
 -MUMmer - tested version is 3.23 (http://sourceforge.net/projects/mummer/)
--GATK - tested version is 2.7.2 (issues have been observed with GATK 3+) (https://www.broadinstitute.org/gatk/) 
+ citation:Delcher, A.L., Salzberg, S.L. and Phillippy, A.M. Using MUMmer to identify 
+ similar regions in large sequence sets. Curr Protoc Bioinformatics 2003;Chapter 10:Unit 10 13.
+-GATK - tested version is 2.7.2 (issues have been observed with GATK 3+) (https://www.broadinstitute.org/gatk/)
+ citation: McKenna, A., et al. The Genome Analysis Toolkit: a MapReduce framework for 
+ analyzing next-generation DNA sequencing data. Genome Res 2010;20(9):1297-1303.
 -BWA - tested version if 0.7.5 (http://bio-bwa.sourceforge.net/)
+ citation:Li, H. Aligning sequence reads, clone sequences and assembly contigs with BWA-MEM.
+ arXiv.org 2013(arXiv:1303.3997 [q-bio.GN]).
 -SnpEff - tested version is 3.3 (http://snpeff.sourceforge.net/) (optional)
+ citation: Cingolani P, Platts A, Wang le L, Coon M, Nguyen T, Wang L, Land SJ, Lu X, 
+ Ruden DM. A program for annotating and predicting the effects of single nucleotide 
+ polymorphisms, SnpEff: SNPs in the genome of Drosophila melanogaster strain w1118;
+ iso-2; iso-3. Fly. 2012;6(2):80-92. Epub 2012/06/26. doi: 10.4161/fly.19695. 
+ PubMed PMID: 22728672; PubMed Central PMCID: PMC3679285.
 
 ---------------------------------------------------------------------------------
 --TEST DATA--
