@@ -156,7 +156,8 @@ Options:
 
  -gatk,--gatkjarfile <gatkjarfile>               
 
-    Path to GATK jar file. Requires version 2.5+
+    Path to GATK jar file. Requires version 2.5+ (Many newer versions of GATK are not compatible with Java 1.8.x).
+    The current GATK version (11/2015) of v3.4-46 seems to work with Java 1.8.0.
 
  -bwa,--pathtobwa <pathtobwa>                    
 
